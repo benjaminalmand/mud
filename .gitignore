@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+
+# Runtime save data should stay on the machine, not in the repo.
+saves/*.json
+!saves/.gitkeep

@@ -1,0 +1,14 @@
+[Unit]
+Description=Applehill MUD server
+After=network.target
+
+[Service]
+Type=simple
+User=benjaminalmand
+WorkingDirectory=/home/benjaminalmand/mud
+ExecStart=/usr/bin/python3 /home/benjaminalmand/mud/server_main.py --host 0.0.0.0 --port 4000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
