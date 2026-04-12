@@ -1,0 +1,130 @@
+{
+  "id": "ivy",
+  "name": "Ivy",
+  "race": "elf",
+  "class_id": "wizard",
+  "gender": "Female",
+  "room_id": "applehill_green",
+  "facing": "north",
+  "inventory": [
+    "gnome_prayer_beads",
+    "frayed_sling"
+  ],
+  "group_members": [],
+  "posture": "standing",
+  "wielded_item_id": "frayed_sling",
+  "stats": {
+    "strength": 11,
+    "dexterity": 13,
+    "constitution": 9,
+    "intelligence": 16,
+    "wisdom": 10,
+    "charisma": 10
+  },
+  "base_stats": {
+    "strength": 11,
+    "dexterity": 13,
+    "constitution": 9,
+    "intelligence": 16,
+    "wisdom": 10,
+    "charisma": 10
+  },
+  "equipment": {
+    "finger_1": null,
+    "finger_2": null,
+    "face": null,
+    "around_neck": "gnome_prayer_beads",
+    "neck": null,
+    "symbol": null,
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "hands": null,
+    "arms": null,
+    "waist": null,
+    "wrist_1": null,
+    "wrist_2": null,
+    "offhand": null,
+    "belt_1": null,
+    "belt_2": null,
+    "floating": null
+  },
+  "proficiencies": {
+    "bows": {
+      "level": 1,
+      "title": "Inept",
+      "progress": 0
+    },
+    "single_edged_blades": {
+      "level": 1,
+      "title": "Inept",
+      "progress": 0
+    },
+    "staves": {
+      "level": 3,
+      "title": "Inept",
+      "progress": 0
+    },
+    "slings": {
+      "level": 2,
+      "title": "Inept",
+      "progress": 0
+    },
+    "arcane_magic": {
+      "level": 3,
+      "title": "Inept",
+      "progress": 0
+    }
+  },
+  "languages": [
+    "common",
+    "elven"
+  ],
+  "racial_traits": [
+    "low_light_vision",
+    "keen_senses",
+    "sleep_immune",
+    "enchantment_resistant"
+  ],
+  "class_features": [
+    "spellbook_training",
+    "arcane_focus"
+  ],
+  "known_spells": [
+    "magic_missile",
+    "ray_of_frost"
+  ],
+  "spellbook": [
+    "magic_missile",
+    "ray_of_frost"
+  ],
+  "prepared_spells": {
+    "1": [
+      "magic_missile",
+      "ray_of_frost"
+    ]
+  },
+  "spell_slots_used": {
+    "1": 0
+  },
+  "active_quests": {},
+  "completed_quests": [],
+  "feat_points": 0,
+  "stat_points_available": 0,
+  "stat_points_spent": 0,
+  "level": 1,
+  "experience": 0,
+  "base_speed": 30,
+  "size": "medium",
+  "starter_item_ids": [
+    "gnome_prayer_beads",
+    "frayed_sling"
+  ],
+  "hp": 3,
+  "max_hp": 3,
+  "mana": 9,
+  "max_mana": 9,
+  "stamina": 100,
+  "max_stamina": 100
+}

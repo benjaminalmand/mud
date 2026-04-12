@@ -1,0 +1,821 @@
+{
+  "zone": {
+    "id": "applehill",
+    "name": "Applehill",
+    "theme": "A quiet orchard village beneath the watch of Garl Glittergold, troubled by hungry goblins in the trees.",
+    "starting_room": "applehill_green",
+    "summary": "Applehill is a small, hard-working village known for sweet bread, hard cider, and long rows of apple trees. A bright temple to Garl Glittergold stands near the northern lane, while the western orchard has lately become a nuisance-haunted battleground for farm folk and green adventurers alike."
+  },
+  "rooms": [
+    {
+      "id": "applehill_south_road",
+      "name": "South Road",
+      "short_description": "A narrow dirt road runs toward Applehill between low walls and open fields.",
+      "map": { "x": 0, "y": 1 },
+      "long_description": "A narrow dirt road winds its way toward Applehill, its surface rutted by wagon wheels and hardened by the sun. Low stone walls and patches of clover border the way, while open fields and scattered trees lend the approach a lonely, wind-worn feel. The village lies just ahead, but the quiet here makes every creak of branch and scrape of boot seem louder than it ought to. Human tracks cross the path in familiar patterns, though now and then smaller, uglier prints appear among them.",
+      "exits": {
+        "north": "applehill_green"
+      },
+      "tags": ["village", "road", "outskirts"]
+    },
+    {
+      "id": "applehill_green",
+      "name": "Applehill Green",
+      "short_description": "The heart of Applehill is a modest green worn smooth by years of use.",
+      "map": { "x": 0, "y": 0 },
+      "long_description": "The heart of Applehill is a modest green of packed earth and sparse grass, worn smooth by years of boots, cartwheels, and wandering livestock. A weathered notice board leans nearby, and an old bench sits where villagers can rest a moment before moving on. Around the square, simple wooden buildings lean slightly with age beneath patched thatch roofs. The scent of baked bread and crushed apples lingers faintly in the air, and the folk who cross the green do so with quiet purpose, offering strangers little more than a glance.",
+      "exits": {
+        "north": "applehill_north_lane",
+        "south": "applehill_south_road",
+        "east": "applehill_inn_common",
+        "west": "applehill_bakery"
+      },
+      "tags": ["village", "hub", "safe"]
+    },
+    {
+      "id": "applehill_inn_common",
+      "name": "The Cask and Crumb",
+      "short_description": "A low-ceilinged inn common room glows with lantern light and hearthfire.",
+      "map": { "x": 1, "y": 0 },
+      "long_description": "The inn's common room is low-ceilinged and warmly lit by smoking lanterns hung from rough beams overhead. A broad hearth crackles along the far wall, its fire giving off more comfort than heat, while a handful of sturdy tables sit scattered across the room, their surfaces nicked and stained by years of use. The smell of ale, woodsmoke, and stewed meat hangs thick in the air. Travelers and villagers alike keep mostly to themselves, speaking in low tones that only now and then rise into a short burst of laughter.",
+      "exits": {
+        "west": "applehill_green",
+        "up": "applehill_inn_loft"
+      },
+      "tags": ["village", "inn", "indoors", "safe"]
+    },
+    {
+      "id": "applehill_inn_loft",
+      "name": "Inn Loft",
+      "short_description": "A cramped loft offers a few plain beds beneath the inn rafters.",
+      "map": { "x": 1, "y": -2 },
+      "long_description": "The loft above the inn is plain but serviceable, with a handful of narrow beds tucked beneath low rafters and wool blankets folded at their feet. The floorboards creak with every shifting step, and a narrow window looks out over the green and the weathered roofs beyond. The smell of woodsmoke and stew seeps up through the planks from below, carrying with it the muffled rise and fall of voices from the common room. It is not luxurious, but it is dry, warm, and private enough for most travelers.",
+      "exits": {
+        "down": "applehill_inn_common"
+      },
+      "tags": ["inn", "indoors", "rest"]
+    },
+    {
+      "id": "applehill_bakery",
+      "name": "Applehill Bakery",
+      "short_description": "A narrow bakery glows with oven heat and the scent of fresh bread.",
+      "map": { "x": -1, "y": 0 },
+      "long_description": "The bakery is a narrow, bustling space filled with the comforting aroma of fresh bread and sweet pastries. Shelves along the walls hold loaves of varying sizes, their crusts golden and still warm from the oven. A great stone hearth dominates the rear of the shop, radiating steady heat that leaves the room pleasantly stifling. Flour dust clings to nearly every surface, and the steady rhythm of kneading and scraping makes the world outside feel far away.",
+      "exits": {
+        "east": "applehill_green"
+      },
+      "tags": ["village", "bakery", "indoors", "shop"]
+    },
+    {
+      "id": "applehill_north_lane",
+      "name": "North Lane",
+      "short_description": "A tidy lane runs between close cottages, clipped hedges, and little gardens.",
+      "map": { "x": 0, "y": -1 },
+      "long_description": "The lane narrows here between whitewashed cottages, clipped hedges, and kitchen gardens gone a little wild with late herbs and flowers. Laundry lines stir overhead, and somewhere nearby a shutter knocks softly in the breeze. To the east, pale steps climb toward the bright temple of Garl Glittergold, while to the west the orchard fence marks the edge of ground the villagers no longer trust as they once did. It is a quiet, orderly place, though the peace feels strained by the trouble beyond the gate.",
+      "exits": {
+        "south": "applehill_green",
+        "east": "temple_steps",
+        "west": "orchard_gate"
+      },
+      "tags": ["village", "lane", "residential"]
+    },
+    {
+      "id": "temple_steps",
+      "name": "Temple Steps",
+      "short_description": "Broad pale steps rise toward a cheerful temple bright with carved stone and colored glass.",
+      "map": { "x": 1, "y": -1 },
+      "long_description": "Wide pale steps lead up to the temple, their edges worn smooth by years of visiting feet. Colored glass catches the light above the doorway and scatters it in jewel-bright fragments across the stone. Carved gnome faces grin from the rails in varying expressions of mischief, and a polished brass bell hangs nearby, ready to be rung for festival, prayer, or trouble. Even before entering, the place feels warmer and more inviting than its stone should allow.",
+      "exits": {
+        "west": "applehill_north_lane",
+        "east": "temple_hall"
+      },
+      "tags": ["temple", "landmark", "outdoors", "safe"]
+    },
+    {
+      "id": "temple_hall",
+      "name": "Hall of Glittering Grace",
+      "short_description": "The small temple hall of Garl Glittergold feels bright, intricate, and oddly playful.",
+      "map": { "x": 2, "y": -1 },
+      "long_description": "This small temple is more intricate than any other structure in Applehill, its stonework alive with carvings of laughing gnomes and clever contraptions whose details have softened but not vanished with time. The air inside feels strangely light, as though the hall itself shares a private joke with those who enter. A simple altar stands at the center, adorned with polished trinkets, bits of colored glass, and tiny worked gears that catch the light of ever-burning lamps. Somewhere in the stillness, the faint sound of tinkling chimes comes and goes without revealing its source.",
+      "exits": {
+        "west": "temple_steps",
+        "north": "shrine_garden"
+      },
+      "tags": ["temple", "indoors", "holy", "safe"]
+    },
+    {
+      "id": "shrine_garden",
+      "name": "Shrine Garden",
+      "short_description": "A quiet garden behind the temple offers herbs, flowers, and a little space for prayer.",
+      "map": { "x": 2, "y": -2 },
+      "long_description": "Behind the temple lies a neat garden of marigolds, thyme, and smooth river stones set carefully among narrow paths. The air is rich with the mingled scent of herbs warmed by the sun, and bees drift lazily between the blossoms. A tiny shrine with a gold-painted capstone faces toward the orchard, where more than one recent prayer has plainly been directed. Here, the village's worry feels gentler, softened by green things, patient tending, and the hush that gathers in holy corners.",
+      "exits": {
+        "south": "temple_hall"
+      },
+      "tags": ["temple", "garden", "holy", "quiet"]
+    },
+    {
+      "id": "orchard_gate",
+      "name": "Orchard Gate",
+      "short_description": "The orchard begins here in neat rows of fruit-heavy trees and uneasy silence.",
+      "map": { "x": -2, "y": -1 },
+      "long_description": "Rows of apple trees stretch away in tidy lines beyond the gate, their branches heavy with fruit in shades of red and green. The grass grows thicker here than in the village proper, and bruised apples lie scattered beneath the boughs, drawing bees and wasps in a lazy hum. Yet for all the sweetness in the air, something feels off. Broken branches, disturbed earth, and bark scarred by crude blades suggest that unwelcome hands have been at work among the trees.",
+      "exits": {
+        "east": "applehill_north_lane",
+        "west": "orchard_path_south",
+        "south": "cider_storehouse"
+      },
+      "tags": ["orchard", "gate", "transition"]
+    },
+    {
+      "id": "orchard_path_south",
+      "name": "South Orchard Path",
+      "short_description": "A grassy path winds between heavy boughs and windfall apples.",
+      "map": { "x": -3, "y": -1 },
+      "long_description": "Apple trees stand in patient rows on either side of the path, their branches heavy with fruit and their shadows pooling softly across the grass. Windfall apples bruise where they have dropped, lending the air a sweetness touched by rot. Yet the peace is spoiled by signs of rough handling: trampled earth, snapped twigs, and the occasional rude slash in the bark. Whatever has been troubling the orchard has passed this way more than once.",
+      "exits": {
+        "east": "orchard_gate",
+        "north": "orchard_path_north"
+      },
+      "tags": ["orchard", "path", "combat"]
+    },
+    {
+      "id": "cider_storehouse",
+      "name": "Cider Storehouse",
+      "short_description": "A squat storehouse smells strongly of apples, oak casks, and damp wood.",
+      "map": { "x": -2, "y": 0 },
+      "long_description": "This low storehouse shelters stacked barrels, wicker baskets, and rough tools set aside for the pressing season. The smell of apples and oak casks is thick enough to taste, mixing with the damp scent of old timber and packed earth. A few shelves lean beneath the weight of spare taps, rope, and work knives, while one outer plank has been pried loose badly enough to let in a blade of light. Whatever rooted about in here was small, determined, and far more interested in taking than hiding its work.",
+      "exits": {
+        "north": "orchard_gate"
+      },
+      "tags": ["orchard", "storehouse", "indoors", "loot"]
+    },
+    {
+      "id": "orchard_path_north",
+      "name": "North Orchard Path",
+      "short_description": "The orchard grows denser here, with tangled shadows beneath older boughs.",
+      "map": { "x": -3, "y": -2 },
+      "long_description": "The orchard grows denser here, the trees crowding closer together and casting long, tangled shadows over the ground. Light filters through the leaves in uneven patches, and the smell of ripe fruit hangs thick enough to turn cloying. Fallen apples rot where they lie, and the buzz of insects seems louder in the hush beneath the branches. Rustling sounds drift from somewhere ahead, deliberate enough to put a hand to your weapon before you ever glimpse what made them.",
+      "exits": {
+        "south": "orchard_path_south",
+        "north": "fallen_tree_row",
+        "west": "old_well_edge"
+      },
+      "tags": ["orchard", "path", "combat", "goblins"]
+    },
+    {
+      "id": "old_well_edge",
+      "name": "Old Well Edge",
+      "short_description": "An old stone well stands among the trees, cool and damp in the orchard shade.",
+      "map": { "x": -4, "y": -2 },
+      "long_description": "An old stone well stands where the orchard rows break and twist, its circular wall cool to the touch even in the day's warmth. A bucket and rope once hung here, but now only damp stone and dark water remain below the lip. The earth around it is packed hard by many feet and darkened by splashed water, though few villagers would have reason to linger this deep in the trees. Muddy prints and disturbed soil suggest the place has lately served thirstier, less welcome visitors.",
+      "exits": {
+        "east": "orchard_path_north"
+      },
+      "tags": ["orchard", "well", "combat"]
+    },
+    {
+      "id": "fallen_tree_row",
+      "name": "Fallen Tree Row",
+      "short_description": "A splintered apple tree lies across the path in a wreck of bark, fruit, and torn grass.",
+      "map": { "x": -3, "y": -3 },
+      "long_description": "One of the old apple trees has been hacked halfway through and toppled across the lane, its trunk split, its branches sprawled in a ruin of leaves and bruised fruit. The ground around it is trampled flat, as though several small, ill-tempered creatures made sport of the destruction after the work was done. Fresh splinters gleam pale where the wood was cut, and the air carries the sharp scent of broken bark beneath the usual sweetness of the orchard. It is hard to look at the fallen tree and not feel the insult in it.",
+      "exits": {
+        "south": "orchard_path_north",
+        "north": "watch_hill",
+        "east": "goblin_camp",
+        "west": "briar_thicket"
+      },
+      "tags": ["orchard", "combat", "goblins", "hazard"]
+    },
+    {
+      "id": "briar_thicket",
+      "name": "Briar Thicket",
+      "short_description": "A vicious tangle of briars and low brush chokes this corner of the orchard.",
+      "map": { "x": -4, "y": -3 },
+      "long_description": "A mean tangle of briars and low brush chokes this corner of the orchard so thickly that even the light seems reluctant to enter. Thorny runners snag at clothing and skin alike, and the dark spaces beneath the brush are full of half-hidden hollows and narrow animal-like runs. Several of the tunnels are too broad and purposeful to belong to anything harmless. A few stolen apples rot where they were dropped and forgotten, their sweetness turning sour in the thorns.",
+      "exits": {
+        "east": "fallen_tree_row"
+      },
+      "tags": ["orchard", "thicket", "combat", "goblins"]
+    },
+    {
+      "id": "watch_hill",
+      "name": "Watch Hill",
+      "short_description": "A low grassy rise overlooks both the orchard and the distant rooftops of Applehill.",
+      "map": { "x": -3, "y": -4 },
+      "long_description": "This low rise gives a clear view over Applehill's roofs, the pale gleam of the temple, and the ordered lines of the orchard stretching below. From up here, the damage is easier to trace: broken branches, trampled paths, and the subtle crooked line of a goblin trail winding toward rough shelter among the trees. The breeze is a little stronger on the hill, carrying scents of apples, chimney smoke, and distant earth. For all its beauty, the vantage only makes the village's trouble easier to measure.",
+      "exits": {
+        "south": "fallen_tree_row"
+      },
+      "tags": ["orchard", "hill", "overlook", "combat"]
+    },
+    {
+      "id": "goblin_camp",
+      "name": "Ragpicker Camp",
+      "short_description": "A filthy goblin camp crouches among the trees in a mess of smoke, scraps, and stolen goods.",
+      "map": { "x": -2, "y": -3 },
+      "long_description": "Crude lean-tos of torn canvas and orchard branches huddle around a smoky firepit whose ash has spread into the surrounding grass. Stolen baskets, dented pans, broken tools, and half-eaten apples litter the ground in every direction, making the whole place look less like a camp than the aftermath of repeated petty theft. The smell of wet leather, old smoke, and goblin filth hangs thick beneath the trees. Nothing here suggests comfort, but plenty suggests the mean, hungry minds that made it.",
+      "exits": {
+        "west": "fallen_tree_row"
+      },
+      "tags": ["orchard", "camp", "combat", "goblins"]
+    }
+  ],
+  "items": [
+    {
+      "id": "applehill_notice_board",
+      "name": "weathered notice board",
+      "keywords": ["board", "notice", "weathered"],
+      "description": "A leaning notice board covered in faded handbills and one fresh warning about goblins in the orchard.",
+      "room_id": "applehill_green",
+      "portable": false,
+      "value": 0,
+      "weight": 80,
+      "kind": "quest"
+    },
+    {
+      "id": "village_bench",
+      "name": "oak bench",
+      "keywords": ["bench", "oak"],
+      "description": "A sturdy bench polished smooth by years of waiting and gossip.",
+      "room_id": "applehill_green",
+      "portable": false,
+      "value": 1,
+      "weight": 60,
+      "kind": "junk"
+    },
+    {
+      "id": "inn_tin_mug",
+      "name": "tin mug",
+      "keywords": ["mug", "tin", "cup"],
+      "description": "A dented tin mug still carrying the smell of sharp cider.",
+      "room_id": "applehill_inn_common",
+      "portable": true,
+      "value": 2,
+      "weight": 1,
+      "kind": "junk"
+    },
+    {
+      "id": "inn_wooden_spoon",
+      "name": "wooden spoon",
+      "keywords": ["spoon", "wooden"],
+      "description": "A plain wooden spoon darkened by years of stew.",
+      "room_id": "applehill_inn_common",
+      "portable": true,
+      "value": 1,
+      "weight": 1,
+      "kind": "tool"
+    },
+    {
+      "id": "inn_wool_blanket",
+      "name": "wool blanket",
+      "keywords": ["blanket", "wool"],
+      "description": "A coarse blanket that smells faintly of smoke and soap.",
+      "room_id": "applehill_inn_loft",
+      "portable": true,
+      "value": 4,
+      "weight": 3,
+      "kind": "junk"
+    },
+    {
+      "id": "bakers_loaf",
+      "name": "fresh loaf",
+      "keywords": ["loaf", "bread", "fresh"],
+      "description": "A crusty loaf whose warmth has not quite left it.",
+      "room_id": "applehill_bakery",
+      "portable": true,
+      "value": 3,
+      "weight": 1,
+      "kind": "food"
+    },
+    {
+      "id": "apple_turnover",
+      "name": "apple turnover",
+      "keywords": ["turnover", "pastry", "apple"],
+      "description": "A flaky pastry folded around spiced apple filling.",
+      "room_id": "applehill_bakery",
+      "portable": true,
+      "value": 4,
+      "weight": 1,
+      "kind": "food"
+    },
+    {
+      "id": "flour_sack",
+      "name": "flour sack",
+      "keywords": ["sack", "flour"],
+      "description": "A stout sack of flour tied off with a twine knot.",
+      "room_id": "applehill_bakery",
+      "portable": true,
+      "value": 2,
+      "weight": 8,
+      "kind": "tool"
+    },
+    {
+      "id": "temple_bell",
+      "name": "brass temple bell",
+      "keywords": ["bell", "brass", "temple"],
+      "description": "A polished brass bell hung on a carved wooden frame.",
+      "room_id": "temple_steps",
+      "portable": false,
+      "value": 15,
+      "weight": 120,
+      "kind": "trinket",
+      "flags": ["Glowing", "Humming"],
+      "equip_slots": ["floating"]
+    },
+    {
+      "id": "sunlit_candlestick",
+      "name": "gold-painted candlestick",
+      "keywords": ["candlestick", "candle", "gold"],
+      "description": "A simple candlestick painted to resemble beaten gold.",
+      "room_id": "temple_hall",
+      "portable": true,
+      "value": 8,
+      "weight": 2,
+      "kind": "trinket",
+      "flags": ["Glowing"],
+      "equip_slots": ["belt_1"]
+    },
+    {
+      "id": "gnome_prayer_beads",
+      "name": "gnome prayer beads",
+      "keywords": ["beads", "prayer", "gnome"],
+      "description": "A string of polished wooden beads marked with tiny smiling faces.",
+      "room_id": "temple_hall",
+      "portable": true,
+      "value": 6,
+      "weight": 1,
+      "kind": "trinket",
+      "flags": ["Magical", "Humming"],
+      "equip_slots": ["around_neck"],
+      "ac_bonus_types": {
+        "deflection": 1
+      }
+    },
+    {
+      "id": "garden_trowel",
+      "name": "iron trowel",
+      "keywords": ["trowel", "iron", "garden"],
+      "description": "A sturdy little trowel with damp soil still on its blade.",
+      "room_id": "shrine_garden",
+      "portable": true,
+      "value": 3,
+      "weight": 2,
+      "kind": "tool"
+    },
+    {
+      "id": "fallen_apple",
+      "name": "fallen apple",
+      "keywords": ["apple", "fallen", "fruit"],
+      "description": "A red apple bruised on one side but still good enough to eat.",
+      "room_id": "orchard_path_south",
+      "portable": true,
+      "value": 1,
+      "weight": 1,
+      "kind": "food"
+    },
+    {
+      "id": "broken_branch_club",
+      "name": "broken branch club",
+      "keywords": ["branch", "club", "broken"],
+      "description": "A thick branch snapped down and roughly gripped as a cudgel.",
+      "room_id": "orchard_path_south",
+      "portable": true,
+      "value": 2,
+      "weight": 3,
+      "kind": "weapon",
+      "weapon_skill": "clubs",
+      "weapon_type": "club",
+      "weapon_stats": {
+        "attack_bonus": 0,
+        "damage_bonus": 0,
+        "dice_count": 1,
+        "dice_sides": 6,
+        "damage_type": "crush",
+        "hands_required": 1
+      }
+    },
+    {
+      "id": "apple_picker_hook",
+      "name": "apple-picker hook",
+      "keywords": ["hook", "picker", "apple"],
+      "description": "A long-handled hook used to draw fruiting branches within reach.",
+      "room_id": "orchard_gate",
+      "portable": true,
+      "value": 5,
+      "weight": 4,
+      "kind": "tool"
+    },
+    {
+      "id": "orchard_ladder",
+      "name": "orchard ladder",
+      "keywords": ["ladder", "orchard", "wooden"],
+      "description": "A long wooden ladder stained by weather and sap.",
+      "room_id": "orchard_gate",
+      "portable": false,
+      "value": 6,
+      "weight": 40,
+      "kind": "tool"
+    },
+    {
+      "id": "cider_cask",
+      "name": "oak cider cask",
+      "keywords": ["cask", "cider", "oak"],
+      "description": "A small oak cask banded in iron and smelling richly of apples.",
+      "room_id": "cider_storehouse",
+      "portable": false,
+      "value": 10,
+      "weight": 70,
+      "kind": "junk"
+    },
+    {
+      "id": "coil_of_rope",
+      "name": "coil of rope",
+      "keywords": ["rope", "coil"],
+      "description": "A rough hemp rope fit for hauling barrels or tying bundles.",
+      "room_id": "cider_storehouse",
+      "portable": true,
+      "value": 4,
+      "weight": 5,
+      "kind": "tool"
+    },
+    {
+      "id": "cask_tap",
+      "name": "wooden cask tap",
+      "keywords": ["tap", "spigot", "wooden"],
+      "description": "A simple wooden tap for drawing cider from a barrel.",
+      "room_id": "cider_storehouse",
+      "portable": true,
+      "value": 2,
+      "weight": 1,
+      "kind": "tool"
+    },
+    {
+      "id": "well_bucket",
+      "name": "cracked bucket",
+      "keywords": ["bucket", "cracked"],
+      "description": "A split bucket that has seen better days and fewer goblins.",
+      "room_id": "old_well_edge",
+      "portable": true,
+      "value": 1,
+      "weight": 2,
+      "kind": "junk"
+    },
+    {
+      "id": "goblin_sandal",
+      "name": "goblin sandal",
+      "keywords": ["sandal", "goblin", "ragged"],
+      "description": "A ragged sandal stitched from scrap leather and twine.",
+      "room_id": "orchard_path_north",
+      "portable": true,
+      "value": 1,
+      "weight": 1,
+      "kind": "junk"
+    },
+    {
+      "id": "frayed_sling",
+      "name": "frayed sling",
+      "keywords": ["sling", "frayed"],
+      "description": "A cheap sling of worn leather cord, fit for pebbles and mischief.",
+      "room_id": "briar_thicket",
+      "portable": true,
+      "value": 3,
+      "weight": 1,
+      "kind": "weapon",
+      "weapon_skill": "slings",
+      "weapon_type": "sling",
+      "weapon_stats": {
+        "attack_bonus": 1,
+        "damage_bonus": 0,
+        "dice_count": 1,
+        "dice_sides": 4,
+        "damage_type": "shot",
+        "hands_required": 1,
+        "range": 30
+      }
+    },
+    {
+      "id": "patched_goblin_cap",
+      "name": "patched goblin cap",
+      "keywords": ["cap", "goblin", "patched"],
+      "description": "A ridiculous little cap patched with cloth of three different colors.",
+      "room_id": "briar_thicket",
+      "portable": true,
+      "value": 2,
+      "weight": 1,
+      "kind": "armor",
+      "equip_slots": ["head"],
+      "armor_bonus": 1,
+      "ac_bonus_types": {
+        "armour": 1
+      },
+      "armour_type": "light"
+    },
+    {
+      "id": "dented_pot_lid",
+      "name": "dented pot lid",
+      "keywords": ["lid", "pot", "dented"],
+      "description": "A blackened pot lid that might pass for a shield in desperate hands.",
+      "room_id": "goblin_camp",
+      "portable": true,
+      "value": 2,
+      "weight": 2,
+      "kind": "armor",
+      "equip_slots": ["offhand"],
+      "armor_bonus": 1,
+      "ac_bonus_types": {
+        "shield": 1
+      },
+      "armour_type": "shield"
+    },
+    {
+      "id": "stolen_bread_round",
+      "name": "stolen bread round",
+      "keywords": ["bread", "round", "stolen"],
+      "description": "A hard round of bread gone slightly stale in goblin care.",
+      "room_id": "goblin_camp",
+      "portable": true,
+      "value": 2,
+      "weight": 1,
+      "kind": "food"
+    },
+    {
+      "id": "goblin_bone_knife",
+      "name": "goblin bone knife",
+      "keywords": ["knife", "bone", "goblin"],
+      "description": "A crude little knife carved from bone and sharpened badly.",
+      "room_id": "goblin_camp",
+      "portable": true,
+      "value": 4,
+      "weight": 1,
+      "kind": "weapon",
+      "weapon_skill": "short_blades",
+      "weapon_type": "knife",
+      "weapon_stats": {
+        "attack_bonus": 1,
+        "damage_bonus": 0,
+        "dice_count": 1,
+        "dice_sides": 4,
+        "damage_type": "pierce",
+        "hands_required": 1,
+        "critical_multiplier": 2
+      }
+    },
+    {
+      "id": "stolen_prayer_token",
+      "name": "stolen prayer token",
+      "keywords": ["token", "prayer", "stolen"],
+      "description": "A small brass token stamped with the laughing face of Garl Glittergold.",
+      "room_id": "goblin_camp",
+      "portable": true,
+      "value": 7,
+      "weight": 1,
+      "kind": "quest",
+      "flags": ["Magical"],
+      "equip_slots": ["neck"],
+      "ac_bonus_types": {
+        "deflection": 1
+      }
+    }
+  ],
+  "npcs": [
+    {
+      "id": "marta_innkeeper",
+      "name": "Marta Feld",
+      "keywords": ["marta", "innkeeper", "feld"],
+      "description": "A broad-shouldered innkeeper with rolled sleeves, steady hands, and the look of someone who has seen stranger nights than this one.",
+      "room_id": "applehill_inn_common",
+      "disposition": "friendly",
+      "dialogue": [
+        "Keep your boots by the hearth if you're staying.",
+        "If you're headed orchard-way, don't go hungry first."
+      ],
+      "quest_hint": "The inn hears everything, and lately it hears too much about goblins stealing food and tools."
+    },
+    {
+      "id": "tobin_stablehand",
+      "name": "Tobin Reed",
+      "keywords": ["tobin", "stablehand", "reed"],
+      "description": "A lanky youth with straw in his hair and a wary habit of glancing west toward the orchard.",
+      "room_id": "applehill_south_road",
+      "disposition": "neutral",
+      "dialogue": [
+        "I heard cackling out by the trees after dark.",
+        "Little tracks, like a child's, only meaner."
+      ],
+      "quest_hint": "He has seen goblin tracks near the road and says they come from the orchard after sundown."
+    },
+    {
+      "id": "elis_baker",
+      "name": "Elis Marrow",
+      "keywords": ["elis", "baker", "marrow"],
+      "description": "A flour-dusted baker with capable arms and a face lined by worry more than age.",
+      "room_id": "applehill_bakery",
+      "disposition": "friendly",
+      "dialogue": [
+        "Fresh bread I have. Fresh patience, less so.",
+        "Those goblins stole two cooling loaves this morning."
+      ],
+      "quest_hint": "The baker wants the orchard made safe enough that wagons and children can pass again."
+    },
+    {
+      "id": "brana_villager",
+      "name": "Brana Holt",
+      "keywords": ["brana", "villager", "holt"],
+      "description": "A practical village woman carrying a basket and a look that suggests she is not easily fooled.",
+      "room_id": "applehill_green",
+      "disposition": "neutral",
+      "dialogue": [
+        "Applehill was quieter before the orchard trouble began.",
+        "Mind the notice board. Folk keep adding to it."
+      ],
+      "quest_hint": "She points newcomers toward the notice board and says the village needs hands more than speeches."
+    },
+    {
+      "id": "brother_nim",
+      "name": "Brother Nim",
+      "keywords": ["brother", "nim", "priest"],
+      "description": "A cheerful gnome priest in yellow and white vestments, his eyes bright with humor and concern in equal measure.",
+      "room_id": "temple_hall",
+      "disposition": "friendly",
+      "dialogue": [
+        "Garl favors quick wits and warm hearts.",
+        "A goblin can be laughed at, but not ignored."
+      ],
+      "quest_hint": "He is concerned that the goblins stole a temple token and dislikes the omen of it."
+    },
+    {
+      "id": "acolyte_pella",
+      "name": "Pella Brightcoin",
+      "keywords": ["pella", "acolyte", "brightcoin"],
+      "description": "A young acolyte tending candles with solemn care and only the occasional flicker of mischief.",
+      "room_id": "shrine_garden",
+      "disposition": "friendly",
+      "dialogue": [
+        "The garden grows well when the village laughs.",
+        "Lately, the orchard has had the last word."
+      ],
+      "quest_hint": "She has heard that goblins were seen with something brass and holy near their camp."
+    },
+    {
+      "id": "halfen_orchard_keeper",
+      "name": "Halfen Gorse",
+      "keywords": ["halfen", "orchard", "keeper", "gorse"],
+      "description": "A sun-browned orchard keeper with sap on his sleeves and an old pruning knife at his belt.",
+      "room_id": "orchard_gate",
+      "disposition": "wary",
+      "dialogue": [
+        "Trees I understand. Goblins, less so.",
+        "They cut branches just to hear them crack."
+      ],
+      "quest_hint": "He says the worst of the trouble lies deeper in, near a fallen tree and a rude camp."
+    },
+    {
+      "id": "mila_ciderhand",
+      "name": "Mila Dorr",
+      "keywords": ["mila", "ciderhand", "dorr"],
+      "description": "A sturdy woman smelling of apple mash and oak, with callused hands and little patience for thieves.",
+      "room_id": "cider_storehouse",
+      "disposition": "neutral",
+      "dialogue": [
+        "Barrels don't walk off by themselves.",
+        "Something pried at my wall last night."
+      ],
+      "quest_hint": "She suspects goblins are stealing from the storehouse and wants proof brought back from their camp."
+    },
+    {
+      "id": "old_feren",
+      "name": "Old Feren",
+      "keywords": ["feren", "old", "watcher"],
+      "description": "An elderly man with a willow switch and a farmer's eye for damage, standing where he can watch the rows.",
+      "room_id": "watch_hill",
+      "disposition": "wary",
+      "dialogue": [
+        "You can see half the village from here, and all the trouble.",
+        "Keep your feet under you if you go east."
+      ],
+      "quest_hint": "From the hill he has watched goblins slink to and from the camp among the trees."
+    }
+  ],
+  "monsters": [
+    {
+      "id": "orchard_goblin_sneak",
+      "name": "orchard goblin",
+      "keywords": ["goblin", "orchard", "sneak"],
+      "description": "A scrawny goblin with a sack of stolen apples and a face pinched by bad temper.",
+      "room_id": "orchard_path_south",
+      "stats": {
+        "hp": 4,
+        "attack": 2,
+        "defense": 1
+      },
+      "combat": {
+        "attack_bonus": 2,
+        "defense_bonus": 1,
+        "dexterity_modifier": 1,
+        "reflex_save": 2,
+        "dice_count": 1,
+        "dice_sides": 4,
+        "damage_bonus": 0,
+        "attack_verbs": ["slashes", "clubs", "scratches"]
+      },
+      "loot_table": ["fallen_apple", "goblin_sandal"]
+    },
+    {
+      "id": "wellside_goblin",
+      "name": "wellside goblin",
+      "keywords": ["goblin", "wellside", "thief"],
+      "description": "A muddy goblin lurking near the old well, clutching a bucket handle like a club.",
+      "room_id": "old_well_edge",
+      "stats": {
+        "hp": 5,
+        "attack": 2,
+        "defense": 1
+      },
+      "combat": {
+        "attack_bonus": 2,
+        "defense_bonus": 1,
+        "fortitude_save": 2,
+        "reflex_save": 1,
+        "dice_count": 1,
+        "dice_sides": 4,
+        "damage_bonus": 1,
+        "attack_verbs": ["clubs", "bashes", "smashes"]
+      },
+      "loot_table": ["well_bucket", "frayed_sling"]
+    },
+    {
+      "id": "briar_goblin_raider",
+      "name": "briar goblin",
+      "keywords": ["goblin", "briar", "raider"],
+      "description": "This goblin is half-hidden by thorny brush, its patched cap snagged with burrs.",
+      "room_id": "briar_thicket",
+      "stats": {
+        "hp": 5,
+        "attack": 3,
+        "defense": 1
+      },
+      "combat": {
+        "attack_bonus": 3,
+        "defense_bonus": 1,
+        "dexterity_modifier": 2,
+        "reflex_save": 3,
+        "dice_count": 1,
+        "dice_sides": 4,
+        "damage_bonus": 1,
+        "attack_verbs": ["cuts", "slashes", "stabs"]
+      },
+      "loot_table": ["patched_goblin_cap", "frayed_sling"]
+    },
+    {
+      "id": "camp_goblin_scavenger",
+      "name": "goblin scavenger",
+      "keywords": ["goblin", "scavenger", "camp"],
+      "description": "A filthy goblin rummaging through stolen goods with greedy delight.",
+      "room_id": "goblin_camp",
+      "stats": {
+        "hp": 6,
+        "attack": 3,
+        "defense": 2
+      },
+      "combat": {
+        "attack_bonus": 3,
+        "defense_bonus": 2,
+        "fortitude_save": 2,
+        "reflex_save": 2,
+        "will_save": 1,
+        "dice_count": 1,
+        "dice_sides": 6,
+        "damage_bonus": 0,
+        "attack_verbs": ["cuts", "stabs", "slashes"]
+      },
+      "loot_table": ["stolen_bread_round", "dented_pot_lid"]
+    },
+    {
+      "id": "snagtooth_boss",
+      "name": "Snagtooth",
+      "keywords": ["snagtooth", "goblin", "boss", "leader"],
+      "description": "A mean-eyed goblin with a jagged grin, a bone knife, and the swagger of a king in a midden heap.",
+      "room_id": "goblin_camp",
+      "stats": {
+        "hp": 10,
+        "attack": 4,
+        "defense": 3
+      },
+      "combat": {
+        "attack_bonus": 4,
+        "defense_bonus": 3,
+        "fortitude_save": 4,
+        "reflex_save": 3,
+        "will_save": 2,
+        "dexterity_modifier": 1,
+        "dice_count": 1,
+        "dice_sides": 6,
+        "damage_bonus": 2,
+        "attack_verbs": ["stabs", "gouges", "slashes"]
+      },
+      "loot_table": ["goblin_bone_knife", "stolen_prayer_token"]
+    }
+  ]
+}

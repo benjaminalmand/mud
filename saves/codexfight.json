@@ -1,0 +1,122 @@
+{
+  "id": "codexfight",
+  "name": "CodexFight",
+  "race": "human",
+  "class_id": "cleric",
+  "gender": "unknown",
+  "room_id": "goblin_camp",
+  "facing": "east",
+  "inventory": [
+    "sunlit_candlestick",
+    "gnome_prayer_beads"
+  ],
+  "group_members": [],
+  "posture": "standing",
+  "wielded_item_id": null,
+  "stats": {
+    "strength": 12,
+    "dexterity": 12,
+    "constitution": 12,
+    "intelligence": 11,
+    "wisdom": 11,
+    "charisma": 11
+  },
+  "base_stats": {
+    "strength": 12,
+    "dexterity": 12,
+    "constitution": 12,
+    "intelligence": 11,
+    "wisdom": 11,
+    "charisma": 11
+  },
+  "equipment": {
+    "finger_1": null,
+    "finger_2": null,
+    "face": null,
+    "around_neck": "gnome_prayer_beads",
+    "neck": null,
+    "symbol": null,
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "hands": null,
+    "arms": null,
+    "waist": null,
+    "wrist_1": null,
+    "wrist_2": null,
+    "offhand": null,
+    "belt_1": "sunlit_candlestick",
+    "belt_2": null,
+    "floating": null
+  },
+  "proficiencies": {
+    "clubs": {
+      "level": 3,
+      "title": "Inept",
+      "progress": 0
+    },
+    "staves": {
+      "level": 2,
+      "title": "Inept",
+      "progress": 0
+    },
+    "divine_magic": {
+      "level": 3,
+      "title": "Inept",
+      "progress": 1
+    },
+    "brawling": {
+      "level": 2,
+      "title": "Inept",
+      "progress": 0
+    }
+  },
+  "languages": [
+    "common"
+  ],
+  "racial_traits": [
+    "adaptable",
+    "versatile",
+    "extra_training"
+  ],
+  "class_features": [
+    "divine_channeling",
+    "holy_lore"
+  ],
+  "known_spells": [
+    "cure_light_wounds",
+    "sacred_flame"
+  ],
+  "spellbook": [
+    "cure_light_wounds",
+    "sacred_flame"
+  ],
+  "prepared_spells": {
+    "1": [
+      "sacred_flame"
+    ]
+  },
+  "spell_slots_used": {
+    "1": 1
+  },
+  "active_quests": {},
+  "completed_quests": [],
+  "feat_points": 1,
+  "stat_points_available": 0,
+  "stat_points_spent": 0,
+  "level": 1,
+  "experience": 100,
+  "base_speed": 30,
+  "size": "medium",
+  "starter_item_ids": [
+    "sunlit_candlestick",
+    "gnome_prayer_beads"
+  ],
+  "hp": 6,
+  "max_hp": 9,
+  "mana": 0,
+  "max_mana": 0,
+  "stamina": 92,
+  "max_stamina": 100
+}

@@ -1,0 +1,73 @@
+{
+  "id": "ben",
+  "name": "Ben",
+  "race": "human",
+  "class_id": "fighter",
+  "gender": "Male",
+  "room_id": "",
+  "facing": "north",
+  "inventory": [],
+  "group_members": [],
+  "posture": "standing",
+  "wielded_item_id": null,
+  "stats": {
+    "strength": 11,
+    "dexterity": 11,
+    "constitution": 11,
+    "intelligence": 10,
+    "wisdom": 10,
+    "charisma": 10
+  },
+  "base_stats": {
+    "strength": 11,
+    "dexterity": 11,
+    "constitution": 11,
+    "intelligence": 10,
+    "wisdom": 10,
+    "charisma": 10
+  },
+  "equipment": {
+    "finger_1": null,
+    "finger_2": null,
+    "face": null,
+    "around_neck": null,
+    "neck": null,
+    "symbol": null,
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "hands": null,
+    "arms": null,
+    "waist": null,
+    "wrist_1": null,
+    "wrist_2": null,
+    "offhand": null,
+    "belt_1": null,
+    "belt_2": null,
+    "floating": null
+  },
+  "proficiencies": {
+    "clubs": {
+      "level": 4,
+      "title": "Amateur"
+    },
+    "short_blades": {
+      "level": 3,
+      "title": "Inept"
+    }
+  },
+  "languages": [
+    "common"
+  ],
+  "feat_points": 0,
+  "stat_points_spent": 0,
+  "level": 1,
+  "experience": 0,
+  "hp": 12,
+  "max_hp": 12,
+  "mana": 0,
+  "max_mana": 0,
+  "stamina": 100,
+  "max_stamina": 100
+}

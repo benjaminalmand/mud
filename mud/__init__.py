@@ -1,0 +1,1 @@
+"""Applehill MUD prototype package."""
