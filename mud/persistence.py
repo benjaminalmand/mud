@@ -1,18 +1,27 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict
 from pathlib import Path
 
 from mud.models import Player
 
 
-SAVE_DIR = Path(__file__).resolve().parent.parent / "saves"
+DEFAULT_SAVE_DIR = Path(__file__).resolve().parent.parent / "saves"
+
+
+def configured_save_dir() -> Path:
+    override = os.getenv("APPLEHILL_SAVE_DIR", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return DEFAULT_SAVE_DIR
 
 
 def ensure_save_dir() -> Path:
-    SAVE_DIR.mkdir(parents=True, exist_ok=True)
-    return SAVE_DIR
+    save_dir = configured_save_dir()
+    save_dir.mkdir(parents=True, exist_ok=True)
+    return save_dir
 
 
 def slugify_name(name: str) -> str:

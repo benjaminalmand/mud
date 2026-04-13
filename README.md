@@ -19,6 +19,8 @@ Clients can then connect with the VM's external IP and port `4000`.
 ## Deploy On Linux With systemd
 
 The repo includes a service template at `deploy/applehill-mud.service`.
+It stores live character saves outside the repo at `/home/benjaminalmand/applehill-data/saves`
+so deploys and git pulls do not wipe them.
 
 Typical install steps on the VM:
 
@@ -28,6 +30,14 @@ sudo systemctl daemon-reload
 sudo systemctl enable applehill-mud
 sudo systemctl start applehill-mud
 sudo systemctl status applehill-mud
+```
+
+If you already have saves in the repo-local `saves/` folder on the VM, migrate them once:
+
+```bash
+mkdir -p /home/benjaminalmand/applehill-data/saves
+cp ~/mud/saves/*.json /home/benjaminalmand/applehill-data/saves/
+sudo systemctl restart applehill-mud
 ```
 
 ## Current Features

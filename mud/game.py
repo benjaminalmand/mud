@@ -5,7 +5,7 @@ from collections import defaultdict
 from shutil import get_terminal_size
 
 from mud.derived import derive_monster_stats, derive_player_stats, item_ac_bonus_types as derived_item_ac_bonus_types
-from mud.models import CombatState, Event, Item, Monster, Npc, Player, World
+from mud.models import Character, CombatState, Event, Item, Monster, Npc, Player, World
 from mud.persistence import save_player
 from mud.quests import QUESTS
 from mud.session import GameSession, LocalTerminalSession
@@ -143,6 +143,10 @@ class Game:
 
         if verb == "drop":
             self.drop_item(args)
+            return True
+
+        if verb in {"give", "hand"}:
+            self.give_item(args)
             return True
 
         if verb in {"wield", "hold"}:
@@ -377,9 +381,9 @@ class Game:
             self.emit_self_event(item.description)
             return
 
-        npc = self.find_npc(target)
-        if npc is not None:
-            self.emit_self_event(npc.description)
+        character = self.find_room_character(target)
+        if character is not None:
+            self.emit_self_event(character.description)
             return
 
         monster = self.find_monster(target)
@@ -766,6 +770,19 @@ class Game:
 
         self.emit_self_event(f"You are not carrying '{target}'.")
 
+    def give_item(self, args: list[str]) -> None:
+        if len(args) < 2:
+            self.emit_self_event("Give what to whom?")
+            return
+        item, target = self.resolve_carried_item_and_character(args)
+        if item is None or target is None:
+            self.emit_self_event("Give what to whom?")
+            return
+        if target.id == self.player.id:
+            self.emit_self_event("You already have it.")
+            return
+        self.handle_item_transfer(item, target)
+
     def equip_item(self, args: list[str]) -> None:
         if not args:
             if self.player.wielded_item_id and self.player.wielded_item_id in self.world.items:
@@ -916,19 +933,7 @@ class Game:
             self.emit_self_event('Brother Nim says, "Applehill still speaks well of your help in the orchard."')
             return
         if self.player_has_item(str(quest["required_item_id"])):
-            for line in quest["complete_text"]:
-                self.emit_self_event(line)
-            self.remove_item_by_id(str(quest["required_item_id"]))
-            reward_item_id = str(quest["reward_item_id"])
-            if reward_item_id not in self.player.inventory:
-                reward_item = self.world.items.get(reward_item_id)
-                if reward_item is not None:
-                    reward_item.room_id = None
-                    self.player.inventory.append(reward_item_id)
-                    self.emit_self_event(f"You receive {reward_item.name}.")
-            self.gain_experience(int(quest["reward_xp"]))
-            self.player.active_quests.pop(quest_id, None)
-            self.player.completed_quests.append(quest_id)
+            self.emit_self_event('Brother Nim says, "You found it? Hand it here and let us set this right."')
             return
         if quest_id not in self.player.active_quests:
             self.player.active_quests[quest_id] = "active"
@@ -1013,7 +1018,7 @@ class Game:
         self.emit_self_event(
             "Use n s e w u d to move, look or l to inspect, get/drop for items, "
             "inv/i for inventory, eq for equipment, score for your sheet, "
-            "wear/wield/equip <item>, remove <item>, talk <name>, quests, kill <target>, "
+            "wear/wield/equip <item>, remove <item>, give <item> <person>, talk <name>, quests, kill <target>, "
             "say <message>, sayto <target> <message>, socials like wave/smile/hug, "
             "eat <food>, rest, spells, prepare <spell>, cast <spell>, save, and quit to leave."
         )
@@ -1173,10 +1178,17 @@ class Game:
                 return npc
         return None
 
-    def find_room_character(self, target: str):
+    def other_room_characters(self) -> list[Character]:
+        # Multiplayer sessions can extend this later with room-visible players.
+        return []
+
+    def find_room_character(self, target: str) -> Character | None:
         npc = self.find_npc(target)
         if npc is not None:
             return npc
+        for character in self.other_room_characters():
+            if matches(target, character.name, character.keywords):
+                return character
         return None
 
     def resolve_character_target_and_message(self, args: list[str]):
@@ -1187,6 +1199,89 @@ class Game:
                 message = " ".join(args[index:]).strip()
                 return target, message
         return None, ""
+
+    def carried_items(self) -> list[Item]:
+        carried = []
+        seen: set[str] = set()
+        for item_id in self.player.inventory:
+            item = self.world.items.get(item_id)
+            if item is None or item.id in seen:
+                continue
+            carried.append(item)
+            seen.add(item.id)
+        wielded = self.wielded_weapon()
+        if wielded is not None and wielded.id not in seen:
+            carried.append(wielded)
+            seen.add(wielded.id)
+        for item_id in self.player.equipment.values():
+            if not item_id:
+                continue
+            item = self.world.items.get(item_id)
+            if item is None or item.id in seen:
+                continue
+            carried.append(item)
+            seen.add(item.id)
+        return carried
+
+    def find_carried_item(self, target: str) -> Item | None:
+        for item in self.carried_items():
+            if matches(target, item.name, item.keywords):
+                return item
+        return None
+
+    def resolve_carried_item_and_character(self, args: list[str]) -> tuple[Item | None, Character | None]:
+        for index in range(1, len(args)):
+            candidate_item = " ".join(args[:index])
+            candidate_target = " ".join(args[index:])
+            item = self.find_carried_item(candidate_item)
+            target = self.find_room_character(candidate_target)
+            if item is not None and target is not None:
+                return item, target
+
+        for index in range(len(args) - 1, 0, -1):
+            candidate_item = " ".join(args[:index])
+            candidate_target = " ".join(args[index:])
+            item = self.find_carried_item(candidate_item)
+            target = self.find_room_character(candidate_target)
+            if item is not None and target is not None:
+                return item, target
+        return None, None
+
+    def handle_item_transfer(self, item: Item, target: Character) -> None:
+        if isinstance(target, Npc):
+            if self.handle_npc_item_transfer(item, target):
+                return
+            self.emit_self_event(f"{target.name} has no need for {item.name}.")
+            return
+        self.emit_self_event(f"You cannot give {item.name} to {target.name}.")
+
+    def handle_npc_item_transfer(self, item: Item, npc: Npc) -> bool:
+        quest_id = "applehill_stolen_token"
+        quest = QUESTS[quest_id]
+        if npc.id == "brother_nim" and item.id == str(quest["required_item_id"]):
+            self.complete_brother_nim_turn_in(item)
+            return True
+        return False
+
+    def complete_brother_nim_turn_in(self, item: Item) -> None:
+        quest_id = "applehill_stolen_token"
+        quest = QUESTS[quest_id]
+        self.emit_self_event(f"You give {item.name} to Brother Nim.")
+        self.emit_room_event(self.player.room_id, f"{self.player.name} gives {item.name} to Brother Nim.", kind="item")
+        for line in quest["complete_text"]:
+            self.emit_self_event(line)
+        self.remove_item_by_id(item.id)
+        reward_item_id = str(quest["reward_item_id"])
+        if reward_item_id not in self.player.inventory:
+            reward_item = self.world.items.get(reward_item_id)
+            if reward_item is not None:
+                reward_item.room_id = None
+                self.player.inventory.append(reward_item_id)
+                self.emit_self_event(f"You receive {reward_item.name}.")
+        self.gain_experience(int(quest["reward_xp"]))
+        self.player.active_quests.pop(quest_id, None)
+        if quest_id not in self.player.completed_quests:
+            self.player.completed_quests.append(quest_id)
 
     def find_monster(self, target: str) -> Monster | None:
         for monster in self.world.monsters_in_room(self.player.room_id):

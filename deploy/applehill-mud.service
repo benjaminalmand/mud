@@ -6,6 +6,8 @@ After=network.target
 Type=simple
 User=benjaminalmand
 WorkingDirectory=/home/benjaminalmand/mud
+Environment=APPLEHILL_SAVE_DIR=/home/benjaminalmand/applehill-data/saves
+ExecStartPre=/usr/bin/mkdir -p /home/benjaminalmand/applehill-data/saves
 ExecStart=/usr/bin/python3 /home/benjaminalmand/mud/server_main.py --host 0.0.0.0 --port 4000
 Restart=always
 RestartSec=3
