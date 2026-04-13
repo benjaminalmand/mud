@@ -8,6 +8,14 @@ Local single-player MUD prototype built in Python with ANSI/VT100 terminal rende
 python main.py
 ```
 
+The startup flow now uses accounts:
+
+- log in with account name + password
+- play a character on that account
+- create a new character on that account
+- delete characters from that account
+- change the account password
+
 ## Run As A Network MUD
 
 ```powershell
@@ -19,8 +27,12 @@ Clients can then connect with the VM's external IP and port `4000`.
 ## Deploy On Linux With systemd
 
 The repo includes a service template at `deploy/applehill-mud.service`.
-It stores live character saves outside the repo at `/home/benjaminalmand/applehill-data/saves`
-so deploys and git pulls do not wipe them.
+It stores live accounts and character saves outside the repo at:
+
+- `/home/benjaminalmand/applehill-data/accounts`
+- `/home/benjaminalmand/applehill-data/saves`
+
+That keeps deploys and git pulls from wiping live players.
 
 Typical install steps on the VM:
 
@@ -36,6 +48,7 @@ If you already have saves in the repo-local `saves/` folder on the VM, migrate t
 
 ```bash
 mkdir -p /home/benjaminalmand/applehill-data/saves
+mkdir -p /home/benjaminalmand/applehill-data/accounts
 cp ~/mud/saves/*.json /home/benjaminalmand/applehill-data/saves/
 sudo systemctl restart applehill-mud
 ```

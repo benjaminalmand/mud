@@ -107,6 +107,7 @@ class Event:
 @dataclass(slots=True)
 class Player:
     id: str = "adventurer"
+    account_id: str = ""
     name: str = "Adventurer"
     race: str = "human"
     class_id: str = "fighter"

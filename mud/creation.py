@@ -20,7 +20,15 @@ def apply_race_adjustments(base_stats: dict[str, int], race_id: str) -> dict[str
     return adjusted
 
 
-def build_player(name: str, race_id: str, class_id: str, gender: str, allocated_stats: dict[str, int]) -> Player:
+def build_player(
+    name: str,
+    race_id: str,
+    class_id: str,
+    gender: str,
+    allocated_stats: dict[str, int],
+    *,
+    account_id: str = "",
+) -> Player:
     race = RACES[race_id]
     class_def = CLASSES[class_id]
     base_stats = apply_race_adjustments(allocated_stats, race_id)
@@ -49,6 +57,7 @@ def build_player(name: str, race_id: str, class_id: str, gender: str, allocated_
 
     return Player(
         id=slugify_name(name),
+        account_id=account_id,
         name=name,
         race=race_id,
         class_id=class_id,
@@ -73,11 +82,25 @@ def build_player(name: str, race_id: str, class_id: str, gender: str, allocated_
     )
 
 
-def build_default_player(name: str, race_id: str = "human", class_id: str = "fighter", gender: str = "unknown") -> Player:
-    return build_player(name, race_id, class_id, gender, DEFAULT_BASE_STATS.copy())
+def build_default_player(
+    name: str,
+    race_id: str = "human",
+    class_id: str = "fighter",
+    gender: str = "unknown",
+    *,
+    account_id: str = "",
+) -> Player:
+    return build_player(name, race_id, class_id, gender, DEFAULT_BASE_STATS.copy(), account_id=account_id)
 
 
-def create_and_save_default_player(name: str, race_id: str = "human", class_id: str = "fighter", gender: str = "unknown") -> Player:
-    player = build_default_player(name, race_id=race_id, class_id=class_id, gender=gender)
+def create_and_save_default_player(
+    name: str,
+    race_id: str = "human",
+    class_id: str = "fighter",
+    gender: str = "unknown",
+    *,
+    account_id: str = "",
+) -> Player:
+    player = build_default_player(name, race_id=race_id, class_id=class_id, gender=gender, account_id=account_id)
     save_player(player)
     return player
