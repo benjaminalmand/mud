@@ -394,11 +394,16 @@ class Game:
         self.emit_self_event(f"You see no '{target}' here.")
 
     def show_inventory(self) -> None:
-        if not self.player.inventory:
+        equipped_ids = {item_id for item_id in self.player.equipment.values() if item_id}
+        visible_inventory = [
+            self.world.items[item_id].name
+            for item_id in self.player.inventory
+            if item_id in self.world.items and item_id not in equipped_ids and item_id != self.player.wielded_item_id
+        ]
+        if not visible_inventory:
             self.emit_self_event("You are carrying nothing.")
             return
-        names = [self.world.items[item_id].name for item_id in self.player.inventory]
-        self.emit_self_event(f"You are carrying: {', '.join(names)}")
+        self.emit_self_event(f"You are carrying: {', '.join(visible_inventory)}")
 
     def show_equipment(self) -> None:
         lines = ["You are using:"]

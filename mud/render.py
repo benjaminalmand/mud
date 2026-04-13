@@ -102,10 +102,10 @@ def render_body_panel(
     lines.append(f"{COLOR_DIM}" + ("=" * min(width, max(10, visible_len(header)))) + f"{COLOR_RESET}")
     append_justified(lines, room.long_description, width, COLOR_GOLD)
 
-    for person_line in room_people_lines(world, player, room.id):
-        append_wrapped(lines, person_line, width)
     for item_line in room_item_lines(world, room.id):
         append_wrapped(lines, item_line, width)
+    for person_line in room_people_lines(world, player, room.id):
+        append_wrapped(lines, person_line, width)
 
     lines.append("")
     for entry in room_events:
@@ -253,17 +253,17 @@ def room_people_lines(world: World, player: Player, room_id: str) -> list[str]:
     for npc in world.npcs_in_room(room_id):
         posture = npc.posture
         if npc.id in player.group_members:
-            lines.append(f"     {COLOR_GREEN}{npc.name}{COLOR_RESET} is {posture} here, with your group.")
+            lines.append(f"{COLOR_GREEN}{npc.name}{COLOR_RESET} is {posture} here, with your group.")
         else:
-            lines.append(f"     {COLOR_MAGENTA}{npc.name}{COLOR_RESET} is {posture} here.")
+            lines.append(f"{COLOR_MAGENTA}{npc.name}{COLOR_RESET} is {posture} here.")
     for monster in world.monsters_in_room(room_id):
-        lines.append(f"     {COLOR_RED}{monster.name}{COLOR_RESET} is here.")
+        lines.append(f"{COLOR_RED}{monster.name}{COLOR_RESET} is standing here.")
     return lines
 
 
 def room_item_lines(world: World, room_id: str) -> list[str]:
     return [
-        f"     {COLOR_GREEN}{item_display_name(item)}{COLOR_RESET} is here. {COLOR_DIM}({item.condition}){COLOR_RESET}"
+        f"    {COLOR_GREEN}{item_display_name(item)}{COLOR_RESET} {COLOR_DIM}({item.condition}){COLOR_RESET}"
         for item in world.items_in_room(room_id)
     ]
 
