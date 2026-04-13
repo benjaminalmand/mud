@@ -515,6 +515,7 @@ class Game:
         if not self.player.spellbook:
             self.emit_self_event("You do not know any spells.")
             return
+        lines: list[str] = []
         lines.append("Spellbook")
         for spell_id in self.player.spellbook:
             spell = SPELLS.get(spell_id)
