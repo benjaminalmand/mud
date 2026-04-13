@@ -354,6 +354,19 @@
       }
     },
     {
+      "id": "apprentice_spellbook",
+      "name": "apprentice spellbook",
+      "keywords": ["spellbook", "book", "apprentice"],
+      "description": "A weathered spellbook crowded with careful notes, margin sigils, and a few singed corners from clumsy practice.",
+      "room_id": "temple_hall",
+      "portable": true,
+      "value": 12,
+      "weight": 2,
+      "kind": "tool",
+      "flags": ["Magical"],
+      "equip_slots": ["belt_1"]
+    },
+    {
       "id": "garden_trowel",
       "name": "iron trowel",
       "keywords": ["trowel", "iron", "garden"],

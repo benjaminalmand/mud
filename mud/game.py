@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import shlex
 from collections import defaultdict
 from shutil import get_terminal_size
 
@@ -46,6 +47,11 @@ class Game:
     def __init__(self, player: Player | None = None) -> None:
         self.world: World = load_world()
         self.player = player or Player(room_id=self.world.zone.starting_room)
+        self.room_character_provider = None
+        self.room_event_sink = None
+        self.target_event_sink = None
+        self.player_transfer_sink = None
+        self.session_end_hook = None
         if not self.player.room_id:
             self.player.room_id = self.world.zone.starting_room
         self.hydrate_player_state()
@@ -61,26 +67,32 @@ class Game:
 
     def run_session(self, session: GameSession) -> None:
         self.emit_self_event("You steady yourself for the road ahead.")
-        while True:
-            session.display(session.render(self))
-            result = session.read_command(self)
-            if not result.should_continue:
-                break
-            if not self.step(result.command):
-                break
+        try:
+            while True:
+                session.display(session.render(self))
+                result = session.read_command(self)
+                if not result.should_continue:
+                    break
+                if not self.step(result.command):
+                    break
+        finally:
+            if self.session_end_hook is not None:
+                self.session_end_hook(self)
 
     def step(self, command: str | None) -> bool:
         if command is None:
             command = ""
         if not command:
             self.recover_stamina()
+            self.recover_spell_energy()
             return True
         should_continue = self.handle_command(command)
         self.recover_stamina()
+        self.recover_spell_energy()
         return should_continue
 
     def handle_command(self, raw_command: str) -> bool:
-        parts = raw_command.lower().split()
+        parts = split_command(raw_command)
         verb = parts[0]
         args = parts[1:]
 
@@ -121,8 +133,8 @@ class Game:
             self.show_spells()
             return True
 
-        if verb in {"prepare", "memorize"}:
-            self.prepare_spell(args)
+        if verb in {"prepare", "memorize", "memorise", "mem"}:
+            self.memorize_spell(args)
             return True
 
         if verb == "sit":
@@ -135,6 +147,14 @@ class Game:
 
         if verb == "rest":
             self.rest()
+            return True
+
+        if verb == "meditate":
+            self.meditate()
+            return True
+
+        if verb == "forget":
+            self.forget_spell(args)
             return True
 
         if verb in {"get", "take"}:
@@ -162,7 +182,7 @@ class Game:
             return True
 
         if verb in {"talk", "ask"}:
-            self.talk(args)
+            self.talk(args, mode=verb)
             return True
 
         if verb == "say":
@@ -218,8 +238,15 @@ class Game:
         return derive_monster_stats(monster)
 
     def hydrate_player_state(self) -> None:
+        class_def = CLASSES.get(self.player.class_id, CLASSES["fighter"])
+        if not self.player.known_spells and class_def.starting_spells:
+            self.player.known_spells = class_def.starting_spells.copy()
         if not self.player.spellbook and self.player.known_spells:
             self.player.spellbook = self.player.known_spells.copy()
+        elif not self.player.spellbook and class_def.starting_spells:
+            self.player.spellbook = class_def.starting_spells.copy()
+        if not self.player.starter_item_ids:
+            self.player.starter_item_ids = class_def.starting_items.copy()
         if not self.player.prepared_spells:
             self.reset_spell_preparation()
         held_item_ids = set(self.player.inventory)
@@ -275,6 +302,8 @@ class Game:
 
     def emit_room_event(self, room_id: str, text: str, *, kind: str = "room") -> None:
         self.emit_event(text, room_id=room_id, kind=kind, audience="others")
+        if self.room_event_sink is not None:
+            self.room_event_sink(room_id, self.player.id, text, kind)
 
     def emit_target_event(self, recipient_id: str, text: str, *, room_id: str | None = None, kind: str = "social") -> None:
         target_room = room_id or self.player.room_id
@@ -282,6 +311,11 @@ class Game:
             Event(room_id=target_room, text=text, kind=kind, audience="target", recipient_id=recipient_id)
         )
         self.room_events_by_room[target_room] = self.room_events_by_room[target_room][-40:]
+        if self.target_event_sink is not None:
+            self.target_event_sink(recipient_id, text, kind)
+
+    def receive_external_event(self, text: str, *, kind: str = "room") -> None:
+        self.emit_event(text, kind=kind, audience="self")
 
     def default_combat_action(self, monster: Monster) -> str:
         preferred_spell = self.preferred_combat_spell()
@@ -481,54 +515,91 @@ class Game:
         if not self.player.spellbook:
             self.emit_self_event("You do not know any spells.")
             return
-        lines = ["Prepared Spells"]
-        lines.append(self.spell_slot_summary_line())
-        prepared_any = False
-        for slot_level in sorted(self.available_spell_slots()):
-            prepared = self.player.prepared_spells.get(str(slot_level), [])
-            if prepared:
-                prepared_any = True
-                lines.append(f"Level {slot_level}:")
-                for spell_id in prepared:
-                    spell = SPELLS.get(spell_id)
-                    if spell is None:
-                        continue
-                    lines.append(f"- {spell.name} ({spell.school})")
-        if not prepared_any:
-            lines.append("You have no spells prepared.")
-        lines.append("")
         lines.append("Spellbook")
         for spell_id in self.player.spellbook:
             spell = SPELLS.get(spell_id)
             if spell is None:
                 continue
             lines.append(f"- {spell.name} (level {spell.spell_level}) {spell.description}")
+        lines.append("")
+        lines.append("Memorised Slots")
+        lines.extend(self.memorized_slot_lines())
         self.set_room_view(*lines)
 
-    def prepare_spell(self, args: list[str]) -> None:
+    def memorize_spell(self, args: list[str]) -> None:
         if not args:
-            self.emit_self_event("Prepare which spell?")
+            self.set_room_view(*(["Memorised Slots"] + self.memorized_slot_lines()))
             return
         if not self.player.spellbook:
             self.emit_self_event("You have no spellcasting tradition to prepare from.")
             return
-        spell_name = " ".join(args)
+        if self.player.posture not in {"sitting", "meditating"} and "safe" not in self.current_room().tags:
+            self.emit_self_event("You must be resting or meditating to memorise a spell.")
+            return
+        count, effective_level, spell_name = parse_memorize_args(args)
         spell_id = self.find_known_spell(spell_name)
         if spell_id is None:
             self.emit_self_event(f"You do not know '{spell_name}'.")
             return
         spell = SPELLS[spell_id]
-        level_key = str(spell.spell_level)
-        available_slots = self.available_spell_slots().get(spell.spell_level, 0)
+        class_def = CLASSES.get(self.player.class_id, CLASSES["fighter"])
+        if class_def.spell_preparation == "spellbook" and not self.has_spellbook():
+            self.emit_self_event("You need to be carrying your spellbook to memorise wizard spells.")
+            return
+        slot_level = effective_level or spell.spell_level
+        if slot_level < spell.spell_level:
+            self.emit_self_event(f"{spell.name} cannot fit into a level {slot_level} slot.")
+            return
+        if not self.can_cast_spell_level(slot_level):
+            self.emit_self_event(f"You lack the required {self.player_snapshot().spellcasting_ability or 'casting ability'} for level {slot_level} magic.")
+            return
+        level_key = str(slot_level)
+        available_slots = self.available_spell_slots().get(slot_level, 0)
         if available_slots <= 0:
-            self.emit_self_event(f"You cannot prepare level {spell.spell_level} spells.")
+            self.emit_self_event(f"You cannot memorise level {slot_level} spells.")
             return
         prepared = self.player.prepared_spells.setdefault(level_key, [])
-        while len(prepared) < available_slots:
-            prepared.append(spell_id)
-        prepared[0] = spell_id
-        self.player.spell_slots_used[level_key] = min(self.player.spell_slots_used.get(level_key, 0), available_slots)
-        self.emit_self_event(f"You prepare {spell.name}.")
+        free_slots = max(0, available_slots - len(prepared))
+        if free_slots <= 0:
+            self.emit_self_event(f"All level {slot_level} slots are already filled.")
+            return
+        added = min(count, free_slots)
+        prepared.extend([spell_id] * added)
+        self.player.spell_slots_used[level_key] = min(self.player.spell_slots_used.get(level_key, 0), len(prepared))
+        self.emit_self_event(f"You memorise {added} instance(s) of {spell.name}.")
+
+    def forget_spell(self, args: list[str]) -> None:
+        if not args:
+            self.emit_self_event("Forget what?")
+            return
+        if len(args) == 1 and args[0].lower() == "all":
+            self.player.prepared_spells = {str(level): [] for level in self.available_spell_slots()}
+            self.player.spell_slots_used = {str(level): 0 for level in self.available_spell_slots()}
+            self.player.spell_recovery_progress = 0
+            self.emit_self_event("You clear every memorised slot.")
+            return
+        count, level, spell_name = parse_forget_args(args)
+        spell_id = self.find_known_spell(spell_name)
+        if spell_id is None:
+            self.emit_self_event(f"You do not know '{spell_name}'.")
+            return
+        removed = 0
+        levels = [level] if level is not None else sorted(self.available_spell_slots())
+        for slot_level in levels:
+            prepared = self.player.prepared_spells.get(str(slot_level), [])
+            while spell_id in prepared and removed < count:
+                prepared.remove(spell_id)
+                removed += 1
+            self.player.spell_slots_used[str(slot_level)] = min(
+                int(self.player.spell_slots_used.get(str(slot_level), 0)),
+                len(prepared),
+            )
+            if removed >= count:
+                break
+        if removed:
+            self.emit_self_event(f"You forget {removed} instance(s) of {SPELLS[spell_id].name}.")
+        else:
+            self.emit_self_event(f"You do not have {SPELLS[spell_id].name} memorised.")
 
     def show_quests(self) -> None:
         lines = ["Quest Journal"]
@@ -579,28 +650,27 @@ class Game:
     def reset_spell_preparation(self) -> None:
         slots = self.available_spell_slots()
         self.player.spell_slots_used = {str(slot_level): 0 for slot_level in slots}
+        self.player.spell_recovery_progress = 0
         if not self.player.spellbook:
-            self.player.prepared_spells = {}
+            self.player.prepared_spells = {str(slot_level): [] for slot_level in slots}
             return
         prepared: dict[str, list[str]] = {}
         for slot_level, slot_count in slots.items():
-            candidates = [spell_id for spell_id in self.player.spellbook if SPELLS[spell_id].spell_level == slot_level]
-            prepared[str(slot_level)] = [
-                candidates[index % len(candidates)]
-                for index in range(slot_count)
-            ] if candidates else []
+            existing = list(self.player.prepared_spells.get(str(slot_level), []))
+            prepared[str(slot_level)] = existing[:slot_count]
         self.player.prepared_spells = prepared
 
     def find_prepared_spell(self, target: str) -> str | None:
         lowered = target.lower()
+        candidates: list[str] = []
         for spell_ids in self.player.prepared_spells.values():
             for spell_id in spell_ids:
                 spell = SPELLS.get(spell_id)
                 if spell is None:
                     continue
-                if lowered == spell_id or lowered == spell.name.lower() or lowered in spell.name.lower():
-                    return spell_id
-        return None
+                if spell_id not in candidates:
+                    candidates.append(spell_id)
+        return resolve_spell_reference(candidates, lowered)
 
     def consume_prepared_spell(self, spell) -> bool:
         level_key = str(spell.spell_level)
@@ -609,7 +679,7 @@ class Game:
         if used >= total_slots:
             return False
         prepared = self.player.prepared_spells.get(level_key, [])
-        if spell.id not in prepared:
+        if spell.id not in prepared and not (self.player.class_id == "cleric" and ("cure" in spell.name or "harm" in spell.name)):
             return False
         self.player.spell_slots_used[level_key] = used + 1
         return True
@@ -618,20 +688,104 @@ class Game:
         level_key = str(spell.spell_level)
         self.player.spell_slots_used[level_key] = max(0, int(self.player.spell_slots_used.get(level_key, 0)) - 1)
 
+    def memorized_slot_lines(self) -> list[str]:
+        lines: list[str] = [self.spell_slot_summary_line()]
+        slots = self.available_spell_slots()
+        if not slots:
+            lines.append("No spell slots.")
+            return lines
+        for slot_level in sorted(slots):
+            prepared = self.player.prepared_spells.get(str(slot_level), [])
+            used = int(self.player.spell_slots_used.get(str(slot_level), 0))
+            if not prepared:
+                lines.append(f"Level {slot_level}: empty")
+                continue
+            lines.append(f"Level {slot_level}:")
+            for index, spell_id in enumerate(prepared, start=1):
+                spell = SPELLS.get(spell_id)
+                if spell is None:
+                    continue
+                status = "spent" if index <= used else "ready"
+                lines.append(f"- slot {index}: {spell.name} [{status}]")
+        return lines
+
+    def can_cast_spell_level(self, spell_level: int) -> bool:
+        ability_name = self.player_snapshot().spellcasting_ability
+        if ability_name is None:
+            return False
+        return self.player.stats.get(ability_name, 0) >= 10 + spell_level
+
+    def resolve_spell_target(self, target_phrase: str) -> Monster | None:
+        if target_phrase:
+            target = self.find_monster(target_phrase)
+            if target is not None:
+                return target
+        return self.current_combatant() or next(iter(self.world.monsters_in_room(self.player.room_id)), None)
+
+    def spell_failure_chance(self) -> int:
+        failure = 0
+        for item_id in self.player.equipment.values():
+            if not item_id or item_id not in self.world.items:
+                continue
+            item = self.world.items[item_id]
+            armour_type = (item.armour_type or inferred_armour_type(item)).lower()
+            if armour_type == "cloth":
+                continue
+            if armour_type == "leather":
+                failure += 10
+            elif armour_type in {"metal", "mail", "plate"}:
+                failure += 25
+        return min(95, failure)
+
+    def recover_one_spell_slot(self) -> str | None:
+        for slot_level in sorted(self.available_spell_slots()):
+            level_key = str(slot_level)
+            used = int(self.player.spell_slots_used.get(level_key, 0))
+            prepared = self.player.prepared_spells.get(level_key, [])
+            if used <= 0 or not prepared:
+                continue
+            self.player.spell_slots_used[level_key] = used - 1
+            recovered_spell = SPELLS.get(prepared[used - 1])
+            return recovered_spell.name if recovered_spell is not None else None
+        return None
+
+    def find_spontaneous_cleric_spell(self, spell_name: str) -> str | None:
+        spell_id = resolve_spell_reference(self.player.spellbook, spell_name.lower())
+        if spell_id is None:
+            return None
+        spell = SPELLS.get(spell_id)
+        if spell is None or spell_id not in self.player.spellbook:
+            return None
+        if "cure" not in spell.name and "harm" not in spell.name:
+            return None
+        return spell_id
+
     def cast_spell(self, args: list[str]) -> None:
         if not args:
             self.emit_self_event("Cast what?")
             return
         if not self.can_take_action(in_combat_message="You have no action left for spellcasting right now."):
             return
-        spell_name = " ".join(args)
+        spell_name, target_phrase = parse_cast_arguments(args)
         spell_id = self.find_prepared_spell(spell_name)
+        if spell_id is None and self.player.class_id == "cleric":
+            spell_id = self.find_spontaneous_cleric_spell(spell_name)
         if spell_id is None:
-            self.emit_self_event(f"You do not have '{spell_name}' prepared.")
+            self.emit_self_event(f"You do not have '{spell_name}' memorised.")
             return
         spell = SPELLS[spell_id]
+        if not self.can_cast_spell_level(spell.spell_level):
+            self.emit_self_event(f"You lack the required {self.player_snapshot().spellcasting_ability or 'casting ability'} to cast level {spell.spell_level} spells.")
+            return
         if not self.consume_prepared_spell(spell):
             self.emit_self_event(f"You have no level {spell.spell_level} slots remaining.")
+            return
+        failure = self.spell_failure_chance()
+        if failure > 0 and roll_d100() <= failure:
+            self.spend_action()
+            self.emit_self_event(f"Your armour disrupts the casting of {spell.name}.")
+            if self.combat is not None:
+                self.end_player_turn()
             return
 
         self.improve_proficiency(self.spell_skill_id(), 1)
@@ -650,7 +804,7 @@ class Game:
                 self.end_player_turn()
             return
 
-        monster = self.current_combatant() or next(iter(self.world.monsters_in_room(self.player.room_id)), None)
+        monster = self.resolve_spell_target(target_phrase)
         if monster is None:
             self.emit_self_event("There is no worthy target here.")
             self.restore_spell_use(spell)
@@ -724,6 +878,14 @@ class Game:
         self.emit_self_event("You sit down.")
         self.emit_room_event(self.player.room_id, f"{self.player.name} sits down.", kind="posture")
 
+    def meditate(self) -> None:
+        if self.player.posture == "meditating":
+            self.emit_self_event("You are already meditating.")
+            return
+        self.player.posture = "meditating"
+        self.emit_self_event("You settle into meditation.")
+        self.emit_room_event(self.player.room_id, f"{self.player.name} settles into meditation.", kind="posture")
+
     def stand_up(self) -> None:
         if self.player.posture == "standing":
             self.emit_self_event("You are already standing.")
@@ -733,8 +895,23 @@ class Game:
         self.emit_room_event(self.player.room_id, f"{self.player.name} stands up.", kind="posture")
 
     def recover_stamina(self) -> None:
-        recovery = 3 if self.player.posture == "sitting" else 1
+        recovery = 4 if self.player.posture == "meditating" else 3 if self.player.posture == "sitting" else 1
         self.player.stamina = min(self.player.max_stamina, self.player.stamina + recovery)
+
+    def recover_spell_energy(self) -> None:
+        if not any(int(value) > 0 for value in self.player.spell_slots_used.values()):
+            self.player.spell_recovery_progress = 0
+            return
+        gain = 3 if self.player.posture == "meditating" else 1 if self.player.posture == "sitting" else 0
+        if gain <= 0:
+            return
+        self.player.spell_recovery_progress += gain
+        if self.player.spell_recovery_progress < 6:
+            return
+        self.player.spell_recovery_progress = 0
+        recovered = self.recover_one_spell_slot()
+        if recovered is not None:
+            self.emit_self_event(f"You regain enough energy to cast {recovered}.")
 
     def take_item(self, args: list[str]) -> None:
         if not args:
@@ -853,15 +1030,36 @@ class Game:
 
         self.emit_self_event(f"You are not wearing '{target}'.")
 
-    def talk(self, args: list[str]) -> None:
+    def talk(self, args: list[str], mode: str = "talk") -> None:
         if not args:
-            self.emit_self_event("Talk to whom?")
+            self.emit_self_event("Talk to whom?" if mode == "talk" else "Ask whom about what?")
             return
 
-        target = " ".join(args)
-        npc = self.find_npc(target)
-        if npc is None:
+        topic = ""
+        if mode == "ask" and "about" in [part.lower() for part in args]:
+            split_index = next(index for index, part in enumerate(args) if part.lower() == "about")
+            target = " ".join(args[:split_index]).strip()
+            topic = " ".join(args[split_index + 1:]).strip().lower()
+        else:
+            target = " ".join(args)
+        character = self.find_room_character(target)
+        if character is None:
             self.emit_self_event(f"No one named '{target}' is here.")
+            return
+        if not isinstance(character, Npc):
+            if mode == "ask" and topic:
+                self.emit_self_event(f"You ask {character.name} about {topic}.")
+                self.emit_target_event(character.id, f"{self.player.name} asks you about {topic}.", kind="social")
+            else:
+                self.emit_self_event(f"You strike up a quiet conversation with {character.name}.")
+                self.emit_target_event(character.id, f"{self.player.name} tries to strike up a conversation with you.", kind="social")
+            return
+        npc = character
+
+        if mode == "ask" and topic:
+            if self.handle_npc_topic(npc, topic):
+                return
+            self.emit_self_event(f"{npc.name} does not seem to know much about {topic}.")
             return
 
         if npc.id == "brother_nim":
@@ -880,6 +1078,26 @@ class Game:
         self.emit_self_event(f"{npc.name} says, \"{npc.dialogue[0]}\"")
         if npc.quest_hint:
             self.emit_self_event(f"You gather this much: {npc.quest_hint}")
+
+    def handle_npc_topic(self, npc: Npc, topic: str) -> bool:
+        keywords = set(topic.replace("'", " ").split())
+        if npc.id == "brother_nim":
+            if keywords & {"token", "prayer", "temple"}:
+                self.emit_self_event('Brother Nim says, "The token is a small thing, but stolen holy things sour the whole village."')
+                return True
+            if keywords & {"goblin", "goblins", "orchard"}:
+                self.emit_self_event('Brother Nim says, "The orchard has become their hiding place. Find their camp and you will find the truth of this trouble."')
+                return True
+        if npc.id == "elis_baker" and keywords & {"goblin", "goblins", "orchard", "bread"}:
+            self.emit_self_event('Elis says, "They steal whatever they can carry, but the orchard is where they lair and where the village needs help most."')
+            return True
+        if npc.id == "halfen_orchard_keeper" and keywords & {"camp", "goblin", "goblins", "tree", "fallen"}:
+            self.emit_self_event('Halfen says, "Follow the worst of the broken rows north and west. You will find a fallen tree, and beyond it the camp."')
+            return True
+        if npc.id == "mila_ciderhand" and keywords & {"storehouse", "wall", "goblin", "goblins"}:
+            self.emit_self_event('Mila says, "They pried at my wall with filthy little tools. Bring back proof from their camp and nobody here will doubt you."')
+            return True
+        return False
 
     def say(self, args: list[str]) -> None:
         if not args:
@@ -1025,7 +1243,7 @@ class Game:
             "inv/i for inventory, eq for equipment, score for your sheet, "
             "wear/wield/equip <item>, remove <item>, give <item> <person>, talk <name>, quests, kill <target>, "
             "say <message>, sayto <target> <message>, socials like wave/smile/hug, "
-            "eat <food>, rest, spells, prepare <spell>, cast <spell>, save, and quit to leave."
+            "eat <food>, rest, meditate, spells, mem <spell>, forget <spell>, cast '<spell>' [target], save, and quit to leave."
         )
 
     def start_combat(self, monster: Monster) -> None:
@@ -1184,8 +1402,9 @@ class Game:
         return None
 
     def other_room_characters(self) -> list[Character]:
-        # Multiplayer sessions can extend this later with room-visible players.
-        return []
+        if self.room_character_provider is None:
+            return []
+        return self.room_character_provider(self.player.room_id, self.player.id)
 
     def find_room_character(self, target: str) -> Character | None:
         npc = self.find_npc(target)
@@ -1258,7 +1477,17 @@ class Game:
                 return
             self.emit_self_event(f"{target.name} has no need for {item.name}.")
             return
-        self.emit_self_event(f"You cannot give {item.name} to {target.name}.")
+        if self.player_transfer_sink is None:
+            self.emit_self_event(f"You cannot give {item.name} to {target.name}.")
+            return
+        if not self.player_transfer_sink(self.player.id, target.id, item.id):
+            self.emit_self_event(f"You cannot give {item.name} to {target.name} right now.")
+            return
+        self.remove_item_by_id(item.id)
+        item.room_id = None
+        self.emit_self_event(f"You give {item.name} to {target.name}.")
+        self.emit_target_event(target.id, f"{self.player.name} gives you {item.name}.", kind="item")
+        self.emit_room_event(self.player.room_id, f"{self.player.name} gives {item.name} to {target.name}.", kind="item")
 
     def handle_npc_item_transfer(self, item: Item, npc: Npc) -> bool:
         quest_id = "applehill_stolen_token"
@@ -1320,6 +1549,9 @@ class Game:
             self.player.wielded_item_id = None
             return None
         return item
+
+    def has_spellbook(self) -> bool:
+        return any("spellbook" in item.name.lower() for item in self.carried_items())
 
     def player_attack_power(self) -> int:
         return self.player_snapshot().attack_power
@@ -1391,16 +1623,7 @@ class Game:
         return roll_d20() + getattr(self.monster_snapshot(monster), f"{save_name}_save")
 
     def find_known_spell(self, target: str) -> str | None:
-        lowered = target.lower()
-        for spell_id in self.player.spellbook:
-            spell = SPELLS.get(spell_id)
-            if spell is None:
-                continue
-            if lowered == spell_id or lowered == spell.name.lower():
-                return spell_id
-            if lowered in spell.name.lower():
-                return spell_id
-        return None
+        return resolve_spell_reference(self.player.spellbook, target.lower())
 
     def spellcasting_modifier(self, spell_id: str) -> int:
         spell = SPELLS[spell_id]
@@ -1966,3 +2189,86 @@ def attack_noun(item: Item | None) -> str:
         "crush": "crushing",
         "strike": "striking",
     }[damage_type]
+
+
+def split_command(raw_command: str) -> list[str]:
+    try:
+        parts = shlex.split(raw_command)
+    except ValueError:
+        parts = raw_command.split()
+    return [parts[0].lower(), *parts[1:]] if parts else []
+
+
+def resolve_spell_reference(candidates: list[str], query: str) -> str | None:
+    lowered = query.lower().strip()
+    if not lowered:
+        return None
+    exact_matches: list[str] = []
+    partial_matches: list[str] = []
+    for spell_id in candidates:
+        spell = SPELLS.get(spell_id)
+        if spell is None:
+            continue
+        names = {spell_id.lower(), spell.name.lower()}
+        if lowered in names:
+            exact_matches.append(spell_id)
+            continue
+        if any(name.startswith(lowered) for name in names):
+            partial_matches.append(spell_id)
+    if len(exact_matches) == 1:
+        return exact_matches[0]
+    if len(partial_matches) == 1:
+        return partial_matches[0]
+    return None
+
+
+def parse_cast_arguments(args: list[str]) -> tuple[str, str]:
+    if not args:
+        return "", ""
+    return args[0], " ".join(args[1:]).strip()
+
+
+def parse_memorize_args(args: list[str]) -> tuple[int, int | None, str]:
+    count = 1
+    effective_level: int | None = None
+    remaining = list(args)
+    if remaining and remaining[0].isdigit():
+        count = max(1, int(remaining.pop(0)))
+    if remaining and remaining[0].isdigit():
+        effective_level = max(1, int(remaining.pop(0)))
+    if remaining and remaining[0].lower() == "domain":
+        remaining.pop(0)
+    return count, effective_level, " ".join(remaining)
+
+
+def parse_forget_args(args: list[str]) -> tuple[int, int | None, str]:
+    count = 1
+    level: int | None = None
+    remaining = list(args)
+    if remaining and remaining[0].isdigit():
+        count = max(1, int(remaining.pop(0)))
+    if remaining and remaining[0].isdigit():
+        level = max(1, int(remaining.pop(0)))
+    return count, level, " ".join(remaining)
+
+
+def inferred_armour_type(item: Item) -> str:
+    if item.armour_type:
+        armour_type = item.armour_type.lower()
+        if armour_type == "light":
+            return "leather"
+        if armour_type in {"medium", "heavy"}:
+            return "metal"
+        return armour_type
+    if item.kind != "armor":
+        return "cloth"
+    name = item.name.lower()
+    if any(keyword in name for keyword in ["mail", "plate", "chain", "metal", "iron", "steel"]):
+        return "metal"
+    if any(keyword in name for keyword in ["leather", "hide", "skin"]):
+        return "leather"
+    return "cloth"
+
+
+def roll_d100() -> int:
+    return random.randint(1, 100)

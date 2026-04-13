@@ -208,7 +208,7 @@ CLASSES: dict[str, ClassRule] = {
         spell_preparation="spellbook",
         class_features=["spellbook_training", "arcane_focus"],
         starting_proficiencies={"staves": 3, "slings": 2, "arcane_magic": 3},
-        starting_items=["gnome_prayer_beads", "frayed_sling"],
+        starting_items=["apprentice_spellbook", "frayed_sling"],
         starting_spells=["magic_missile", "ray_of_frost"],
     ),
     "cleric": ClassRule(

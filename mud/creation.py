@@ -41,14 +41,7 @@ def build_player(
         slots = spell_slots_for(class_id, 1, base_stats[class_def.spellcasting_ability])
         spell_slots_used = {str(slot_level): 0 for slot_level in slots}
         for slot_level, slot_count in slots.items():
-            available = [spell_id for spell_id in class_def.starting_spells if spell_id]
-            if not available:
-                prepared_spells[str(slot_level)] = []
-                continue
-            prepared_spells[str(slot_level)] = [
-                available[index % len(available)]
-                for index in range(slot_count)
-            ]
+            prepared_spells[str(slot_level)] = []
 
     proficiencies = {
         skill_id: {"level": level, "title": proficiency_title(level), "progress": 0}

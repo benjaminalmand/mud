@@ -4,7 +4,7 @@ import re
 from shutil import get_terminal_size
 from textwrap import wrap
 
-from mud.models import Item, Player, Room, World
+from mud.models import Character, Item, Player, Room, World
 
 
 DIRECTION_GLYPHS = {
@@ -33,14 +33,20 @@ def clear_screen() -> str:
     return "\x1b[2J\x1b[H"
 
 
-def render_screen(world: World, player: Player, message_log: list[str], combat_status: str = "") -> str:
+def render_screen(
+    world: World,
+    player: Player,
+    message_log: list[str],
+    combat_status: str = "",
+    other_characters: list[Character] | None = None,
+) -> str:
     width, height = get_terminal_size((120, 36))
     room = world.rooms[player.room_id]
     header_height = 9
     body_width = max(60, width)
     footer_height = 1
 
-    header_lines = render_header(world, player, room, width, header_height)
+    header_lines = render_header(world, player, room, width, header_height, other_characters or [])
     body_height = max(10, height - header_height - footer_height - 1)
     body_lines = render_body_panel(
         world,
@@ -49,6 +55,7 @@ def render_screen(world: World, player: Player, message_log: list[str], combat_s
         message_log,
         body_width,
         body_height,
+        other_characters or [],
     )
     footer_lines = render_footer(world, player, room, width, combat_status)
 
@@ -56,9 +63,9 @@ def render_screen(world: World, player: Player, message_log: list[str], combat_s
     return clear_screen() + "\n".join(header_lines + content_lines + footer_lines)
 
 
-def render_header(world: World, player: Player, room: Room, width: int, height: int) -> list[str]:
+def render_header(world: World, player: Player, room: Room, width: int, height: int, other_characters: list[Character]) -> list[str]:
     grouped = grouped_people(world, player, room.id)
-    others = others_in_room(world, player, room.id)
+    others = others_in_room(world, player, room.id, other_characters)
     ground = [item.name for item in world.items_in_room(room.id)]
 
     box_gap = 1
@@ -88,6 +95,7 @@ def render_body_panel(
     room_events: list[str],
     width: int,
     height: int,
+    other_characters: list[Character],
 ) -> list[str]:
     lines: list[str] = []
     if is_overlay_view(room_events):
@@ -104,7 +112,7 @@ def render_body_panel(
 
     for item_line in room_item_lines(world, room.id):
         append_wrapped(lines, item_line, width)
-    for person_line in room_people_lines(world, player, room.id):
+    for person_line in room_people_lines(world, player, room.id, other_characters):
         append_wrapped(lines, person_line, width)
 
     lines.append("")
@@ -238,8 +246,10 @@ def grouped_people(world: World, player: Player, room_id: str) -> list[str]:
     return names
 
 
-def others_in_room(world: World, player: Player, room_id: str) -> list[str]:
+def others_in_room(world: World, player: Player, room_id: str, other_characters: list[Character]) -> list[str]:
     names: list[str] = []
+    for character in other_characters:
+        names.append(character.name)
     for npc in world.npcs_in_room(room_id):
         if npc.id not in player.group_members:
             names.append(npc.name)
@@ -248,8 +258,10 @@ def others_in_room(world: World, player: Player, room_id: str) -> list[str]:
     return names
 
 
-def room_people_lines(world: World, player: Player, room_id: str) -> list[str]:
+def room_people_lines(world: World, player: Player, room_id: str, other_characters: list[Character]) -> list[str]:
     lines: list[str] = []
+    for character in other_characters:
+        lines.append(f"{COLOR_CYAN}{character.name}{COLOR_RESET} is {character.posture} here.")
     for npc in world.npcs_in_room(room_id):
         posture = npc.posture
         if npc.id in player.group_members:
@@ -266,6 +278,34 @@ def room_item_lines(world: World, room_id: str) -> list[str]:
         f"    {COLOR_GREEN}{item_display_name(item)}{COLOR_RESET} {COLOR_DIM}({item.condition}){COLOR_RESET}"
         for item in world.items_in_room(room_id)
     ]
+
+
+def render_transcript(
+    world: World,
+    player: Player,
+    message_log: list[str],
+    combat_status: str = "",
+    other_characters: list[Character] | None = None,
+    *,
+    include_room: bool = False,
+) -> list[str]:
+    room = world.rooms[player.room_id]
+    lines: list[str] = []
+    other_characters = other_characters or []
+
+    if include_room:
+        lines.append(room.name)
+        lines.extend(wrap(ANSI_RE.sub("", room.long_description), width=78) or [""])
+        lines.extend(strip_ansi(line) for line in room_item_lines(world, room.id))
+        lines.extend(strip_ansi(line) for line in room_people_lines(world, player, room.id, other_characters))
+        exits = ", ".join(room.exits.keys()) or "none"
+        lines.append(f"Exits: {exits}")
+        if combat_status:
+            lines.append(f"Combat: {combat_status}")
+
+    for entry in message_log:
+        lines.extend(wrap(strip_ansi(entry), width=78) or [""])
+    return lines
 
 
 def append_wrapped(lines: list[str], text: str, width: int) -> None:
@@ -291,6 +331,10 @@ def pad_ansi(text: str, width: int) -> str:
 
 def visible_len(text: str) -> int:
     return len(ANSI_RE.sub("", text))
+
+
+def strip_ansi(text: str) -> str:
+    return ANSI_RE.sub("", text)
 
 
 def render_footer(world: World, player: Player, room: Room, width: int, combat_status: str = "") -> list[str]:

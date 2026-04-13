@@ -15,7 +15,13 @@ class SessionResult:
 
 class GameSession:
     def render(self, game) -> str:
-        return render_screen(game.world, game.player, game.visible_room_events(), game.combat_footer_text())
+        return render_screen(
+            game.world,
+            game.player,
+            game.visible_room_events(),
+            game.combat_footer_text(),
+            game.other_room_characters(),
+        )
 
     def display(self, screen: str) -> None:
         raise NotImplementedError
