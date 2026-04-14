@@ -169,6 +169,7 @@ class Player:
     spellbook: list[str] = field(default_factory=list)
     prepared_spells: dict[str, list[str]] = field(default_factory=dict)
     spell_slots_used: dict[str, int] = field(default_factory=dict)
+    spent_prepared_slots: dict[str, list[bool]] = field(default_factory=dict)
     spell_recovery_progress: int = 0
     active_quests: dict[str, str] = field(default_factory=dict)
     completed_quests: list[str] = field(default_factory=list)

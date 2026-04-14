@@ -254,6 +254,28 @@ SPELLS: dict[str, SpellRule] = {
         attack_type="ranged_touch",
         effects={"damage_dice_count": 1, "damage_dice_sides": 3, "damage_bonus": 0, "damage_type": "cold"},
     ),
+    "burning_hands": SpellRule(
+        id="burning_hands",
+        name="burning hands",
+        spell_level=1,
+        school="evocation",
+        caster_lists=["wizard"],
+        description="A fan of fire roars from your outstretched hand.",
+        targeting="enemy",
+        saving_throw="reflex",
+        effects={"damage_dice_count": 1, "damage_dice_sides": 6, "damage_bonus": 0, "damage_type": "fire"},
+    ),
+    "acid_splash": SpellRule(
+        id="acid_splash",
+        name="acid splash",
+        spell_level=1,
+        school="conjuration",
+        caster_lists=["wizard"],
+        description="A sizzling glob of acid arcs toward your foe.",
+        targeting="enemy",
+        attack_type="ranged_touch",
+        effects={"damage_dice_count": 1, "damage_dice_sides": 4, "damage_bonus": 0, "damage_type": "acid"},
+    ),
     "cure_light_wounds": SpellRule(
         id="cure_light_wounds",
         name="cure light wounds",
@@ -261,8 +283,19 @@ SPELLS: dict[str, SpellRule] = {
         school="conjuration",
         caster_lists=["cleric"],
         description="A wash of gentle radiance closes your lesser hurts.",
-        targeting="self",
+        targeting="ally",
         effects={"heal_dice_count": 1, "heal_dice_sides": 8, "heal_bonus": 1},
+    ),
+    "cause_light_wounds": SpellRule(
+        id="cause_light_wounds",
+        name="cause light wounds",
+        spell_level=1,
+        school="necromancy",
+        caster_lists=["cleric"],
+        description="A spiteful pulse of divine harm blackens flesh at your touch.",
+        targeting="enemy",
+        attack_type="auto",
+        effects={"damage_dice_count": 1, "damage_dice_sides": 8, "damage_bonus": 1, "damage_type": "negative"},
     ),
     "sacred_flame": SpellRule(
         id="sacred_flame",
@@ -274,6 +307,27 @@ SPELLS: dict[str, SpellRule] = {
         targeting="enemy",
         saving_throw="reflex",
         effects={"damage_dice_count": 1, "damage_dice_sides": 4, "damage_bonus": 0, "damage_type": "fire"},
+    ),
+    "cure_serious_wounds": SpellRule(
+        id="cure_serious_wounds",
+        name="cure serious wounds",
+        spell_level=2,
+        school="conjuration",
+        caster_lists=["cleric"],
+        description="A deeper wave of blessed power knits torn flesh and steadies the spirit.",
+        targeting="ally",
+        effects={"heal_dice_count": 2, "heal_dice_sides": 8, "heal_bonus": 3},
+    ),
+    "searing_light": SpellRule(
+        id="searing_light",
+        name="searing light",
+        spell_level=2,
+        school="evocation",
+        caster_lists=["cleric"],
+        description="A hard spear of white-gold radiance lances toward your enemy.",
+        targeting="enemy",
+        attack_type="ranged_touch",
+        effects={"damage_dice_count": 2, "damage_dice_sides": 6, "damage_bonus": 0, "damage_type": "radiant"},
     ),
 }
 
@@ -380,3 +434,10 @@ def strength_carry_limits(score: int) -> tuple[int, int, int]:
 
 def experience_to_next_level(level: int) -> int:
     return max(100, level * 1000)
+
+
+def class_spell_ids(class_id: str) -> list[str]:
+    return sorted(
+        [spell_id for spell_id, spell in SPELLS.items() if class_id in spell.caster_lists],
+        key=lambda spell_id: (SPELLS[spell_id].spell_level, SPELLS[spell_id].name),
+    )

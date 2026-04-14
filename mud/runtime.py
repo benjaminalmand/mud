@@ -73,6 +73,11 @@ class SessionRegistry:
         if game is not None:
             game.receive_external_event(text, kind=kind)
 
+    def lookup_player(self, player_id: str):
+        with self._lock:
+            connection = self._connections.get(player_id)
+            return connection.game.player if connection is not None else None
+
     def transfer_item(self, giver_id: str, recipient_id: str, item_id: str) -> bool:
         with self._lock:
             giver = self._connections.get(giver_id)

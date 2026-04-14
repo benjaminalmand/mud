@@ -36,12 +36,14 @@ def build_player(
     hp = max(1, class_def.hit_die + ability_modifier(base_stats["constitution"]))
     spell_slots_used: dict[str, int] = {}
     prepared_spells: dict[str, list[str]] = {}
+    spent_prepared_slots: dict[str, list[bool]] = {}
     spellbook = class_def.starting_spells.copy()
     if class_def.spellcasting_ability is not None:
         slots = spell_slots_for(class_id, 1, base_stats[class_def.spellcasting_ability])
         spell_slots_used = {str(slot_level): 0 for slot_level in slots}
         for slot_level, slot_count in slots.items():
             prepared_spells[str(slot_level)] = []
+            spent_prepared_slots[str(slot_level)] = []
 
     proficiencies = {
         skill_id: {"level": level, "title": proficiency_title(level), "progress": 0}
@@ -68,6 +70,7 @@ def build_player(
         spellbook=spellbook,
         prepared_spells=prepared_spells,
         spell_slots_used=spell_slots_used,
+        spent_prepared_slots=spent_prepared_slots,
         starter_item_ids=class_def.starting_items.copy(),
         feat_points=1 if race_id == "human" else 0,
         hp=hp,

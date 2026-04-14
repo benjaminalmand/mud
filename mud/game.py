@@ -17,6 +17,7 @@ from mud.rules import (
     ability_modifier,
     base_attack_bonus_for,
     caster_ability_for,
+    class_spell_ids,
     experience_to_next_level,
     proficiency_title,
     save_bonus_for,
@@ -51,6 +52,7 @@ class Game:
         self.room_event_sink = None
         self.target_event_sink = None
         self.player_transfer_sink = None
+        self.player_lookup_provider = None
         self.session_end_hook = None
         if not self.player.room_id:
             self.player.room_id = self.world.zone.starting_room
@@ -133,6 +135,10 @@ class Game:
             self.show_spells()
             return True
 
+        if verb == "learn":
+            self.learn_spell(args)
+            return True
+
         if verb in {"prepare", "memorize", "memorise", "mem"}:
             self.memorize_spell(args)
             return True
@@ -209,6 +215,10 @@ class Game:
             self.cast_spell(args)
             return True
 
+        if verb == "stop":
+            self.emit_self_event("You are not in the middle of a spell right now.")
+            return True
+
         if verb == "help":
             self.show_help()
             return True
@@ -249,6 +259,7 @@ class Game:
             self.player.starter_item_ids = class_def.starting_items.copy()
         if not self.player.prepared_spells:
             self.reset_spell_preparation()
+        self.normalize_spell_slot_state()
         held_item_ids = set(self.player.inventory)
         held_item_ids.update(item_id for item_id in self.player.equipment.values() if item_id)
         if self.player.wielded_item_id:
@@ -274,6 +285,27 @@ class Game:
             slot = choose_equipment_slot(item, self.player.equipment)
             if slot is not None and self.player.equipment.get(slot) is None:
                 self.player.equipment[slot] = item_id
+
+    def normalize_spell_slot_state(self) -> None:
+        normalized: dict[str, list[bool]] = {}
+        for level_key, prepared in self.player.prepared_spells.items():
+            prior_states = list(self.player.spent_prepared_slots.get(level_key, []))
+            prior_spent = int(self.player.spell_slots_used.get(level_key, 0))
+            if len(prior_states) < len(prepared):
+                missing = len(prepared) - len(prior_states)
+                fill = [False] * missing
+                for index in range(min(prior_spent, missing)):
+                    fill[index] = True
+                prior_states.extend(fill)
+            normalized[level_key] = prior_states[: len(prepared)]
+        self.player.spent_prepared_slots = normalized
+        self.sync_spell_slot_counters()
+
+    def sync_spell_slot_counters(self) -> None:
+        self.player.spell_slots_used = {
+            level_key: sum(1 for spent in states if spent)
+            for level_key, states in self.player.spent_prepared_slots.items()
+        }
 
     def set_room_view(self, *lines: str) -> None:
         room_id = self.player.room_id
@@ -512,8 +544,10 @@ class Game:
         self.emit_self_event(f"Your progress is saved to {path.name}.")
 
     def show_spells(self) -> None:
-        if not self.player.spellbook:
-            self.emit_self_event("You do not know any spells.")
+        class_def = CLASSES.get(self.player.class_id, CLASSES["fighter"])
+        available_spell_ids = class_spell_ids(self.player.class_id)
+        if class_def.spellcasting_ability is None and not self.player.spellbook:
+            self.emit_self_event("You do not command any spellcasting tradition.")
             return
         lines: list[str] = []
         lines.append("Spellbook")
@@ -521,11 +555,49 @@ class Game:
             spell = SPELLS.get(spell_id)
             if spell is None:
                 continue
-            lines.append(f"- {spell.name} (level {spell.spell_level}) {spell.description}")
+            lines.append(f"- {spell.name} (level {spell.spell_level}) [known]")
+        if available_spell_ids:
+            lines.append("")
+            lines.append("Tradition")
+            for spell_id in available_spell_ids:
+                if spell_id in self.player.spellbook:
+                    continue
+                spell = SPELLS.get(spell_id)
+                if spell is None:
+                    continue
+                status = "learnable" if self.can_cast_spell_level(spell.spell_level) else "locked"
+                lines.append(f"- {spell.name} (level {spell.spell_level}) [{status}]")
         lines.append("")
         lines.append("Memorised Slots")
         lines.extend(self.memorized_slot_lines())
         self.set_room_view(*lines)
+
+    def learn_spell(self, args: list[str]) -> None:
+        class_def = CLASSES.get(self.player.class_id, CLASSES["fighter"])
+        if class_def.spellcasting_ability is None:
+            self.emit_self_event("You are not trained in spellcasting.")
+            return
+        if not args:
+            self.emit_self_event("Learn which spell?")
+            return
+        available_spell_ids = class_spell_ids(self.player.class_id)
+        spell_id = resolve_spell_reference(available_spell_ids, " ".join(args))
+        if spell_id is None:
+            self.emit_self_event(f"That spell does not belong to the {class_def.name.lower()} tradition.")
+            return
+        if spell_id in self.player.spellbook:
+            self.emit_self_event(f"You already know {SPELLS[spell_id].name}.")
+            return
+        spell = SPELLS[spell_id]
+        if not self.can_cast_spell_level(spell.spell_level):
+            self.emit_self_event(f"You are not yet ready to master level {spell.spell_level} magic.")
+            return
+        if class_def.spell_preparation == "spellbook" and not self.has_spellbook():
+            self.emit_self_event("You need your spellbook in hand before you can commit a new wizard spell to memory.")
+            return
+        self.player.known_spells.append(spell_id)
+        self.player.spellbook.append(spell_id)
+        self.emit_self_event(f"You study and learn {spell.name}.")
 
     def memorize_spell(self, args: list[str]) -> None:
         if not args:
@@ -560,13 +632,15 @@ class Game:
             self.emit_self_event(f"You cannot memorise level {slot_level} spells.")
             return
         prepared = self.player.prepared_spells.setdefault(level_key, [])
+        states = self.player.spent_prepared_slots.setdefault(level_key, [])
         free_slots = max(0, available_slots - len(prepared))
         if free_slots <= 0:
             self.emit_self_event(f"All level {slot_level} slots are already filled.")
             return
         added = min(count, free_slots)
         prepared.extend([spell_id] * added)
-        self.player.spell_slots_used[level_key] = min(self.player.spell_slots_used.get(level_key, 0), len(prepared))
+        states.extend([False] * added)
+        self.sync_spell_slot_counters()
         self.emit_self_event(f"You memorise {added} instance(s) of {spell.name}.")
 
     def forget_spell(self, args: list[str]) -> None:
@@ -575,6 +649,7 @@ class Game:
             return
         if len(args) == 1 and args[0].lower() == "all":
             self.player.prepared_spells = {str(level): [] for level in self.available_spell_slots()}
+            self.player.spent_prepared_slots = {str(level): [] for level in self.available_spell_slots()}
             self.player.spell_slots_used = {str(level): 0 for level in self.available_spell_slots()}
             self.player.spell_recovery_progress = 0
             self.emit_self_event("You clear every memorised slot.")
@@ -587,16 +662,20 @@ class Game:
         removed = 0
         levels = [level] if level is not None else sorted(self.available_spell_slots())
         for slot_level in levels:
-            prepared = self.player.prepared_spells.get(str(slot_level), [])
-            while spell_id in prepared and removed < count:
-                prepared.remove(spell_id)
+            level_key = str(slot_level)
+            prepared = self.player.prepared_spells.get(level_key, [])
+            states = self.player.spent_prepared_slots.get(level_key, [])
+            while removed < count:
+                match_index = next((index for index, prepared_spell_id in enumerate(prepared) if prepared_spell_id == spell_id), None)
+                if match_index is None:
+                    break
+                prepared.pop(match_index)
+                if match_index < len(states):
+                    states.pop(match_index)
                 removed += 1
-            self.player.spell_slots_used[str(slot_level)] = min(
-                int(self.player.spell_slots_used.get(str(slot_level), 0)),
-                len(prepared),
-            )
             if removed >= count:
                 break
+        self.sync_spell_slot_counters()
         if removed:
             self.emit_self_event(f"You forget {removed} instance(s) of {SPELLS[spell_id].name}.")
         else:
@@ -643,23 +722,30 @@ class Game:
             return "Slots: none"
         parts = []
         for slot_level in sorted(slots):
-            used = int(self.player.spell_slots_used.get(str(slot_level), 0))
             total = slots[slot_level]
-            parts.append(f"L{slot_level} {max(0, total - used)}/{total}")
+            prepared = self.player.prepared_spells.get(str(slot_level), [])
+            ready = sum(1 for spent in self.player.spent_prepared_slots.get(str(slot_level), []) if not spent)
+            parts.append(f"L{slot_level} {ready}/{len(prepared) if prepared else total}")
         return "Slots: " + "  ".join(parts)
 
     def reset_spell_preparation(self) -> None:
         slots = self.available_spell_slots()
-        self.player.spell_slots_used = {str(slot_level): 0 for slot_level in slots}
         self.player.spell_recovery_progress = 0
         if not self.player.spellbook:
             self.player.prepared_spells = {str(slot_level): [] for slot_level in slots}
+            self.player.spent_prepared_slots = {str(slot_level): [] for slot_level in slots}
+            self.player.spell_slots_used = {str(slot_level): 0 for slot_level in slots}
             return
         prepared: dict[str, list[str]] = {}
+        spent_states: dict[str, list[bool]] = {}
         for slot_level, slot_count in slots.items():
             existing = list(self.player.prepared_spells.get(str(slot_level), []))
             prepared[str(slot_level)] = existing[:slot_count]
+            existing_states = list(self.player.spent_prepared_slots.get(str(slot_level), []))
+            spent_states[str(slot_level)] = [False] * len(prepared[str(slot_level)])
         self.player.prepared_spells = prepared
+        self.player.spent_prepared_slots = spent_states
+        self.sync_spell_slot_counters()
 
     def find_prepared_spell(self, target: str) -> str | None:
         lowered = target.lower()
@@ -673,21 +759,33 @@ class Game:
                     candidates.append(spell_id)
         return resolve_spell_reference(candidates, lowered)
 
-    def consume_prepared_spell(self, spell) -> bool:
+    def consume_prepared_spell(self, spell, *, spontaneous: bool = False) -> int | None:
         level_key = str(spell.spell_level)
-        total_slots = self.available_spell_slots().get(spell.spell_level, 0)
-        used = int(self.player.spell_slots_used.get(level_key, 0))
-        if used >= total_slots:
-            return False
         prepared = self.player.prepared_spells.get(level_key, [])
-        if spell.id not in prepared and not (self.player.class_id == "cleric" and ("cure" in spell.name or "harm" in spell.name)):
-            return False
-        self.player.spell_slots_used[level_key] = used + 1
-        return True
+        states = self.player.spent_prepared_slots.setdefault(level_key, [False] * len(prepared))
+        if len(states) < len(prepared):
+            states.extend([False] * (len(prepared) - len(states)))
+        if spontaneous:
+            for index, spent in enumerate(states):
+                if not spent:
+                    states[index] = True
+                    self.sync_spell_slot_counters()
+                    return index
+            return None
+        for index, (prepared_spell_id, spent) in enumerate(zip(prepared, states)):
+            if prepared_spell_id != spell.id or spent:
+                continue
+            states[index] = True
+            self.sync_spell_slot_counters()
+            return index
+        return None
 
-    def restore_spell_use(self, spell) -> None:
-        level_key = str(spell.spell_level)
-        self.player.spell_slots_used[level_key] = max(0, int(self.player.spell_slots_used.get(level_key, 0)) - 1)
+    def restore_spell_use(self, spell_level: int, slot_index: int) -> None:
+        level_key = str(spell_level)
+        states = self.player.spent_prepared_slots.get(level_key, [])
+        if 0 <= slot_index < len(states):
+            states[slot_index] = False
+            self.sync_spell_slot_counters()
 
     def memorized_slot_lines(self) -> list[str]:
         lines: list[str] = [self.spell_slot_summary_line()]
@@ -696,8 +794,9 @@ class Game:
             lines.append("No spell slots.")
             return lines
         for slot_level in sorted(slots):
-            prepared = self.player.prepared_spells.get(str(slot_level), [])
-            used = int(self.player.spell_slots_used.get(str(slot_level), 0))
+            level_key = str(slot_level)
+            prepared = self.player.prepared_spells.get(level_key, [])
+            states = self.player.spent_prepared_slots.get(level_key, [])
             if not prepared:
                 lines.append(f"Level {slot_level}: empty")
                 continue
@@ -706,7 +805,7 @@ class Game:
                 spell = SPELLS.get(spell_id)
                 if spell is None:
                     continue
-                status = "spent" if index <= used else "ready"
+                status = "spent" if index - 1 < len(states) and states[index - 1] else "ready"
                 lines.append(f"- slot {index}: {spell.name} [{status}]")
         return lines
 
@@ -722,6 +821,23 @@ class Game:
             if target is not None:
                 return target
         return self.current_combatant() or next(iter(self.world.monsters_in_room(self.player.room_id)), None)
+
+    def resolve_support_target(self, target_phrase: str) -> tuple[Player | None, str]:
+        if not target_phrase or target_phrase.lower() in {"self", "me", "myself"}:
+            return self.player, self.player.name
+        if target_phrase.lower() == self.player.name.lower():
+            return self.player, self.player.name
+        target = self.find_room_character(target_phrase)
+        if target is None:
+            return None, ""
+        if isinstance(target, Npc):
+            return None, target.name
+        if self.player_lookup_provider is None:
+            return None, target.name
+        target_player = self.player_lookup_provider(target.id)
+        if target_player is None:
+            return None, target.name
+        return target_player, target_player.name
 
     def spell_failure_chance(self) -> int:
         failure = 0
@@ -741,13 +857,17 @@ class Game:
     def recover_one_spell_slot(self) -> str | None:
         for slot_level in sorted(self.available_spell_slots()):
             level_key = str(slot_level)
-            used = int(self.player.spell_slots_used.get(level_key, 0))
             prepared = self.player.prepared_spells.get(level_key, [])
-            if used <= 0 or not prepared:
+            states = self.player.spent_prepared_slots.get(level_key, [])
+            if not prepared or not states:
                 continue
-            self.player.spell_slots_used[level_key] = used - 1
-            recovered_spell = SPELLS.get(prepared[used - 1])
-            return recovered_spell.name if recovered_spell is not None else None
+            for index, spent in enumerate(states):
+                if not spent:
+                    continue
+                states[index] = False
+                self.sync_spell_slot_counters()
+                recovered_spell = SPELLS.get(prepared[index])
+                return recovered_spell.name if recovered_spell is not None else None
         return None
 
     def find_spontaneous_cleric_spell(self, spell_name: str) -> str | None:
@@ -757,7 +877,7 @@ class Game:
         spell = SPELLS.get(spell_id)
         if spell is None or spell_id not in self.player.spellbook:
             return None
-        if "cure" not in spell.name and "harm" not in spell.name:
+        if not any(keyword in spell.name for keyword in {"cure", "harm", "cause", "inflict"}):
             return None
         return spell_id
 
@@ -767,10 +887,15 @@ class Game:
             return
         if not self.can_take_action(in_combat_message="You have no action left for spellcasting right now."):
             return
-        spell_name, target_phrase = parse_cast_arguments(args)
+        castable_spell_ids = list({spell_id for spell_ids in self.player.prepared_spells.values() for spell_id in spell_ids})
+        if self.player.class_id == "cleric":
+            castable_spell_ids.extend(spell_id for spell_id in class_spell_ids(self.player.class_id) if spell_id not in castable_spell_ids)
+        spell_name, target_phrase = parse_cast_arguments(args, castable_spell_ids)
         spell_id = self.find_prepared_spell(spell_name)
+        spontaneous = False
         if spell_id is None and self.player.class_id == "cleric":
             spell_id = self.find_spontaneous_cleric_spell(spell_name)
+            spontaneous = spell_id is not None
         if spell_id is None:
             self.emit_self_event(f"You do not have '{spell_name}' memorised.")
             return
@@ -778,29 +903,46 @@ class Game:
         if not self.can_cast_spell_level(spell.spell_level):
             self.emit_self_event(f"You lack the required {self.player_snapshot().spellcasting_ability or 'casting ability'} to cast level {spell.spell_level} spells.")
             return
-        if not self.consume_prepared_spell(spell):
+        consumed_slot = self.consume_prepared_spell(spell, spontaneous=spontaneous)
+        if consumed_slot is None:
             self.emit_self_event(f"You have no level {spell.spell_level} slots remaining.")
             return
         failure = self.spell_failure_chance()
         if failure > 0 and roll_d100() <= failure:
             self.spend_action()
             self.emit_self_event(f"Your armour disrupts the casting of {spell.name}.")
+            self.restore_spell_use(spell.spell_level, consumed_slot)
             if self.combat is not None:
                 self.end_player_turn()
             return
 
         self.improve_proficiency(self.spell_skill_id(), 1)
-        if spell.targeting == "self":
+        if spell.targeting in {"self", "ally"}:
+            target_player, target_name = self.resolve_support_target(target_phrase)
+            if target_player is None:
+                self.emit_self_event(f"There is no suitable recipient for {spell.name}.")
+                self.restore_spell_use(spell.spell_level, consumed_slot)
+                return
             healed = roll_spell_healing(spell)
-            healed = min(healed, self.player.max_hp - self.player.hp)
-            self.player.hp += healed
+            healed = min(healed, target_player.max_hp - target_player.hp)
+            target_player.hp += healed
             self.spend_action()
-            self.emit_self_event(f"You cast {spell.name}.")
+            if target_player.id == self.player.id:
+                self.emit_self_event(f"You cast {spell.name}.")
+            else:
+                self.emit_self_event(f"You cast {spell.name} on {target_name}.")
+                self.emit_target_event(target_player.id, f"{self.player.name} casts {spell.name} on you.", kind="magic")
             self.emit_self_event(f"{spell.description}")
             if healed > 0:
-                self.emit_self_event(f"You recover {healed} hp.")
+                if target_player.id == self.player.id:
+                    self.emit_self_event(f"You recover {healed} hp.")
+                else:
+                    self.emit_self_event(f"{target_name} recovers {healed} hp.")
             else:
-                self.emit_self_event("The magic washes over you, but you were already at full strength.")
+                if target_player.id == self.player.id:
+                    self.emit_self_event("The magic washes over you, but you were already at full strength.")
+                else:
+                    self.emit_self_event(f"The magic washes over {target_name}, but it finds no wound to close.")
             if self.combat is not None:
                 self.end_player_turn()
             return
@@ -808,7 +950,7 @@ class Game:
         monster = self.resolve_spell_target(target_phrase)
         if monster is None:
             self.emit_self_event("There is no worthy target here.")
-            self.restore_spell_use(spell)
+            self.restore_spell_use(spell.spell_level, consumed_slot)
             return
         if self.combat is None:
             self.combat = CombatState(monster_id=monster.id, player_turn=False)
@@ -1244,7 +1386,7 @@ class Game:
             "inv/i for inventory, eq for equipment, score for your sheet, "
             "wear/wield/equip <item>, remove <item>, give <item> <person>, talk <name>, quests, kill <target>, "
             "say <message>, sayto <target> <message>, socials like wave/smile/hug, "
-            "eat <food>, rest, meditate, spells, mem <spell>, forget <spell>, cast '<spell>' [target], save, and quit to leave."
+            "eat <food>, rest, meditate, spells, learn <spell>, mem <spell>, forget <spell>, cast '<spell>' [target], stop, save, and quit to leave."
         )
 
     def start_combat(self, monster: Monster) -> None:
@@ -2223,10 +2365,18 @@ def resolve_spell_reference(candidates: list[str], query: str) -> str | None:
     return None
 
 
-def parse_cast_arguments(args: list[str]) -> tuple[str, str]:
+def parse_cast_arguments(args: list[str], candidates: list[str]) -> tuple[str, str]:
     if not args:
         return "", ""
-    return args[0], " ".join(args[1:]).strip()
+    best_query = args[0]
+    best_target = " ".join(args[1:]).strip()
+    for index in range(1, len(args) + 1):
+        candidate_query = " ".join(args[:index]).strip()
+        if resolve_spell_reference(candidates, candidate_query) is None:
+            continue
+        best_query = candidate_query
+        best_target = " ".join(args[index:]).strip()
+    return best_query, best_target
 
 
 def parse_memorize_args(args: list[str]) -> tuple[int, int | None, str]:

@@ -109,6 +109,7 @@ class MudRequestHandler(socketserver.StreamRequestHandler):
         game.room_event_sink = RUNTIME_REGISTRY.broadcast_room
         game.target_event_sink = RUNTIME_REGISTRY.send_target
         game.player_transfer_sink = RUNTIME_REGISTRY.transfer_item
+        game.player_lookup_provider = RUNTIME_REGISTRY.lookup_player
         game.session_end_hook = self.on_session_end
         RUNTIME_REGISTRY.register(game)
         RUNTIME_REGISTRY.broadcast_room(game.player.room_id, game.player.id, f"{game.player.name} has entered the room.", "arrival")
